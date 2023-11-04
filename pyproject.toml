@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "chiru"
+version = "0.7.0"
+description = ""
+authors = ["Lura Skye <l@veriny.tf>"]
+readme = "README.md"
+packages = [{include = "chiru", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+httpx = "^0.25.0"
+attrs = "^23.1.0"
+stickney = "^0.7.0"
+anyio = "^4.0.0"
+cattrs = "^23.1.2"
+
+
+[tool.poetry.group.dev.dependencies]
+trio = "^0.23.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
