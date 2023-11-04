@@ -10,7 +10,7 @@ packages = [{include = "chiru", from = "src"}]
 python = "^3.11"
 httpx = "^0.25.0"
 attrs = "^23.1.0"
-stickney = "^0.7.0"
+stickney = {git = "https://github.com/Fuyukai/stickney.git"}
 anyio = "^4.0.0"
 cattrs = "^23.1.2"
 

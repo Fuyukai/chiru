@@ -292,20 +292,24 @@ files = [
 
 [[package]]
 name = "stickney"
-version = "0.7.0"
+version = "0.7.3"
 description = "Asynchronous websockets library"
 optional = false
 python-versions = ">=3.11,<4.0"
-files = [
-    {file = "stickney-0.7.0-py3-none-any.whl", hash = "sha256:ea1fef1daa75e795e0df595680d84c00e6b13a1eeb6e8e2d9f56121adfe41eb9"},
-    {file = "stickney-0.7.0.tar.gz", hash = "sha256:f420e7d59d5f021b762768b0fdcea4a67d5d5452d3dad5e5ef6eb503e5bb93cf"},
-]
+files = []
+develop = false
 
 [package.dependencies]
-anyio = ">=4.0.0,<5.0.0"
-attrs = ">=23.1.0,<24.0.0"
-furl = ">=2.1.3,<3.0.0"
-wsproto = ">=1.2.0,<2.0.0"
+anyio = "^4.0.0"
+attrs = "^23.1.0"
+furl = "^2.1.3"
+wsproto = "^1.2.0"
+
+[package.source]
+type = "git"
+url = "https://github.com/Fuyukai/stickney.git"
+reference = "HEAD"
+resolved_reference = "17a292b7724fe34691499537a53eb0e81a0b911a"
 
 [[package]]
 name = "trio"
@@ -343,4 +347,4 @@ h11 = ">=0.9.0,<1"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "a8aa25f86f06f31564f9ef9a6fb6903b58a590e1ac9cd2ec9065ca84bf8d371c"
+content-hash = "5c5ee3988e340f5ae0d73ccad87f85c75f8c3018acd832a6af1b64ded509dc87"
