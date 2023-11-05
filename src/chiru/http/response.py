@@ -33,17 +33,3 @@ class GatewayResponse:
 
     #: The session start limit information for the current user.
     session_start_limit: GatewaySessionLimits = attr.ib()
-
-
-def create_cattrs_converter() -> Converter:
-    """
-    Creates a ``cattrs`` converter for deserialising web responses.
-    """
-
-    converter = GenConverter(
-        omit_if_default=True, forbid_extra_keys=True,
-        prefer_attrib_converters=True
-    )
-    configure_converter(converter)
-
-    return converter

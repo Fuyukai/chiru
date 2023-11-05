@@ -12,7 +12,9 @@ from anyio.abc import TaskGroup
 from httpx import AsyncClient, Response
 
 from chiru.http.ratelimit import RatelimitManager
-from chiru.http.response import GatewayResponse, create_cattrs_converter
+from chiru.http.response import GatewayResponse
+from chiru.models.oauth import OAuthApplication
+from chiru.serialise import CONVERTER
 
 # Small design notes.
 #
@@ -32,27 +34,13 @@ class Endpoints:
     api_base = "/api/v10"
 
     get_gateway = api_base + "/gateway/bot"
+    oauth2_me = api_base + "/applications/@me"
 
     def __init__(self, base_url: str = "https://discord.com"):
         self.base_url = base_url
 
 
-@attr.s()
-class RatelimitInfo:
-    """
-    Small wrapper around ratelimit information.
-    """
-
-    # X-RateLimit-Remaining
-    #: The number of tokens available on this bucket.
-    tokens: int = attr.ib()
-
-    # X-RateLimit-Reset-After
-    #: The number of seconds into the future when the ratelimit for this bucket will reset.
-    reset_time: float = attr.ib()
-
-
-class HttpClient(object):
+class ChiruHttpClient(object):
     """
     Wrapper around the various Discord HTTP actions.
     """
@@ -63,7 +51,7 @@ class HttpClient(object):
         nursery: TaskGroup,
         httpx_client: AsyncClient,
         token: str,
-        endpoints: Endpoints = Endpoints()
+        endpoints: Endpoints = Endpoints(),
     ):
         """
         :param nursery: The task group to spawn
@@ -78,10 +66,14 @@ class HttpClient(object):
         self._http = httpx_client
 
         package_version = version("chiru")
-        self._http.headers.update({
-            "Authorization": f"Bot {token}",
-            "User-Agent": f"DiscordBot (https://github.com/TBD/TBD, {package_version})"
-        })
+        self._http.headers.update(
+            {
+                "Authorization": f"Bot {token}",
+                "User-Agent": (
+                    f"DiscordBot (https://github.com/TBD/TBD, {package_version})"
+                ),
+            }
+        )
         self._http.base_url = self.endpoints.base_url
         # fuck you! we manage our own timeouts
         self._http.timeout = None
@@ -90,8 +82,6 @@ class HttpClient(object):
         self._ratelimiter = RatelimitManager(nursery)
         # immediately acquired during request processing, and held post-request processing
         self._global_expiration: float = 0.0
-
-        self._converter = create_cattrs_converter()
 
     async def _wait_for_global_ratelimit(self):
         if self._global_expiration > anyio.current_time():
@@ -103,10 +93,9 @@ class HttpClient(object):
         bucket: str,
         method: str,
         path: str,
-
         form_data: Mapping[str, str] = None,
         body_json: Mapping[str, Any] = None,
-        reason: str = None
+        reason: str = None,
     ) -> Response:
         """
         Performs a request to the specified endpoint path. This will automatically deal with
@@ -133,10 +122,7 @@ class HttpClient(object):
 
                 try:
                     req = self._http.build_request(
-                        method=method,
-                        url=path,
-                        data=form_data,
-                        json=body_json
+                        method=method, url=path, data=form_data, json=body_json
                     )
 
                     if reason is not None:
@@ -150,7 +136,9 @@ class HttpClient(object):
                     logger.debug(f"{method} {path} => (failed) (try {tries + 1})", e)
                     continue
 
-                logger.debug(f"{method} {path} => {response.status_code} (try {tries + 1})")
+                logger.debug(
+                    f"{method} {path} => {response.status_code} (try {tries + 1})"
+                )
 
                 # Back in 2016, Discord would return 502s constantly on random requests.
                 # I don't know if this is still the case in 2023, but I see no reason not to keep
@@ -160,7 +148,9 @@ class HttpClient(object):
                     await anyio.sleep(sleep_time)
                     continue
 
-                is_global = response.headers.get("X-RateLimit-Global", "").lower() == "true"
+                is_global = (
+                    response.headers.get("X-RateLimit-Global", "").lower() == "true"
+                )
 
                 if response.status_code == 429:
                     # Uh oh spaghetti-os!
@@ -189,9 +179,18 @@ class HttpClient(object):
         """
 
         resp = await self.request(
-            bucket="gateway",
-            method="GET",
-            path=self.endpoints.get_gateway
+            bucket="gateway", method="GET", path=self.endpoints.get_gateway
         )
 
-        return self._converter.structure(resp.json(), GatewayResponse)
+        return CONVERTER.structure(resp.json(), GatewayResponse)
+
+    async def get_current_application_info(self) -> OAuthApplication:
+        """
+        Gets the application info about the current bot's application.
+        """
+
+        resp = await self.request(
+            bucket="oauth2:me", method="GET", path=self.endpoints.oauth2_me
+        )
+
+        return CONVERTER.structure(resp.json(), OAuthApplication)

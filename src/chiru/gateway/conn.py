@@ -11,12 +11,15 @@ from anyio.streams.memory import MemoryObjectSendStream, MemoryObjectReceiveStre
 from furl import furl
 from stickney import WebsocketClient, WebsocketClosedError
 from stickney import open_ws_connection
-from stickney.frame import TextualMessage, BinaryMessage, CloseMessage, \
-    WsMessage
+from stickney.frame import TextualMessage, BinaryMessage, CloseMessage
 
-from chiru.gateway.event import IncomingGatewayEvent, OutgoingGatewayEvent, GatewayDispatch
+from chiru.gateway.event import (
+    IncomingGatewayEvent,
+    OutgoingGatewayEvent,
+    GatewayDispatch,
+)
 
-INTENTS = ((1 << 22) - 1)
+INTENTS = (1 << 22) - 1
 PRIVILEGED_INTENTS_MESSAGE = (
     "Chiru requires privileged intents to function properly. "
     "Please make sure that they are enabled in your bot page."
@@ -105,17 +108,10 @@ class GatewaySenderWrapper:
         self._ws = ws
         self.logger = logger
 
-    async def send_heartbeat(
-        self,
-        *,
-        seq: int
-    ):
+    async def send_heartbeat(self, *, seq: int):
         self.logger.debug(f"CLI -> SRV: Heartbeat (seq: {seq})")
 
-        body = {
-            "op": GatewayOp.HEARTBEAT,
-            "d": seq
-        }
+        body = {"op": GatewayOp.HEARTBEAT, "d": seq}
 
         return await self._ws.send_message(json.dumps(body))
 
@@ -132,11 +128,7 @@ class GatewaySenderWrapper:
             "op": GatewayOp.IDENTIFY,
             "d": {
                 "token": token,
-                "properties": {
-                    "os": "System V",
-                    "browser": "Chiru",
-                    "device": "Chiru"
-                },
+                "properties": {"os": "System V", "browser": "Chiru", "device": "Chiru"},
                 "compress": True,
                 "shard": [shard_id, shard_count],
                 "intents": INTENTS,
@@ -155,7 +147,7 @@ class GatewaySenderWrapper:
                 "token": token,
                 "session_id": session_id,
                 "seq": seq,
-            }
+            },
         }
 
         return await self._ws.send_message(json.dumps(body))
@@ -245,7 +237,9 @@ async def _super_loop(
                 with anyio.move_on_after(delay=5):
                     await ws.close(code=4100, reason="Zombie!")
 
-                raise WebsocketClosedError(code=4100, reason="Zombie connection detected")
+                raise WebsocketClosedError(
+                    code=4100, reason="Zombie connection detected"
+                )
 
             await wrapped.send_heartbeat(seq=shared_state.sequence)
             next_heartbeat_time = next_heartbeat_time + time_inbetween_heartbeats
@@ -303,7 +297,9 @@ async def _super_loop(
             time_inbetween_heartbeats = raw_data["heartbeat_interval"] / 1000.0
             shared_state.logger.debug("SRV -> CLI: Hello")
 
-            shared_state.logger.info(f"Heartbeating every {time_inbetween_heartbeats} seconds...")
+            shared_state.logger.info(
+                f"Heartbeating every {time_inbetween_heartbeats} seconds..."
+            )
             shared_state.logger.debug(f"Trace: {raw_data.get('_trace')}")
 
             if shared_state.session_id is not None:
@@ -311,14 +307,14 @@ async def _super_loop(
                 await wrapped.send_resume(
                     token=shared_state.token,
                     session_id=shared_state.session_id,
-                    seq=shared_state.sequence
+                    seq=shared_state.sequence,
                 )
             else:
                 shared_state.logger.debug("No session found, asking for a new one.")
                 await wrapped.send_identify(
                     token=shared_state.token,
                     shard_id=shared_state.shard_id,
-                    shard_count=shared_state.shard_count
+                    shard_count=shared_state.shard_count,
                 )
 
             continue
@@ -336,7 +332,9 @@ async def _super_loop(
             shared_state.logger.debug(
                 f"SRV -> CLI: Heartbeat Ack (count: {shared_state.heartbeat_acks})"
             )
-            shared_state.logger.debug(f"Received heartbeat ack #{shared_state.heartbeat_acks}")
+            shared_state.logger.debug(
+                f"Received heartbeat ack #{shared_state.heartbeat_acks}"
+            )
             shared_state.heartbeat_acks += 1
             continue
 
@@ -356,7 +354,9 @@ async def _super_loop(
             shared_state.sequence = seq
 
             dispatch_name = decoded_content["t"]
-            shared_state.logger.debug(f"SRV -> CLI: Dispatch (evt: {dispatch_name}, seq: {seq})")
+            shared_state.logger.debug(
+                f"SRV -> CLI: Dispatch (evt: {dispatch_name}, seq: {seq})"
+            )
 
             if dispatch_name == "READY":
                 id = raw_data["user"]["id"]
@@ -384,7 +384,9 @@ async def _super_loop(
             # Note that in some cases when there's an outage, we will get stuck in a loop of
             # IDENTIFY -> INVALIDATE_SESSION -> IDENTIFY -> ...
 
-            shared_state.logger.debug(f"SRV -> CLI: Invalidate Session (resumable: {raw_data})")
+            shared_state.logger.debug(
+                f"SRV -> CLI: Invalidate Session (resumable: {raw_data})"
+            )
 
             if raw_data:
                 # We can send a RESUME, so let's do so...
@@ -400,7 +402,7 @@ async def _super_loop(
                 await wrapped.send_identify(
                     token=shared_state.token,
                     shard_id=shared_state.shard_id,
-                    shard_count=shared_state.shard_count
+                    shard_count=shared_state.shard_count,
                 )
 
         else:
@@ -432,13 +434,15 @@ async def run_gateway_loop(
         reconnect_url=initial_url,
         token=token,
         shard_id=shard_id,
-        shard_count=shard_count
+        shard_count=shard_count,
     )
 
     while True:
         parsed_url = furl(shared_state.reconnect_url)
         parsed_url.query.params = {"version": "10", "encoding": "json"}
-        shared_state.logger.info(f"Opening new WebSocket connection to {str(parsed_url)}")
+        shared_state.logger.info(
+            f"Opening new WebSocket connection to {str(parsed_url)}"
+        )
 
         async with (
             open_ws_connection(str(parsed_url)) as ws,
@@ -463,7 +467,8 @@ async def run_gateway_loop(
                         raise RuntimeError(PRIVILEGED_INTENTS_MESSAGE)
                     case _:
                         shared_state.logger.warning(
-                            f"Received unexpected close {e.code} ({e.reason}), reconnecting..."
+                            f"Received unexpected close {e.code} ({e.reason}),"
+                            " reconnecting..."
                         )
             finally:
                 # kill both the pumping tasks, close the websocket, and retry.

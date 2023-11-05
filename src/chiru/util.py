@@ -3,13 +3,12 @@ from __future__ import annotations
 from typing import TypeVar, Type
 
 import anyio
-import trio
 from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
 
 ItemT = TypeVar("ItemT")
 
 
-def open_stream_pair(
+def open_channel_pair(
     buffer_size: float = 0, *, item_type: Type[ItemT]
 ) -> tuple[MemoryObjectReceiveStream[ItemT], MemoryObjectSendStream[ItemT]]:
     """
