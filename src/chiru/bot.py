@@ -4,9 +4,9 @@ from typing import AsyncContextManager
 import anyio
 import httpx
 
-from chiru.event.factory import StatefulObjectFactory
 from chiru.gateway.collection import GatewayCollection
 from chiru.http.client import ChiruHttpClient
+from chiru.models.factory import StatefulObjectFactory
 from chiru.models.oauth import OAuthApplication
 
 
