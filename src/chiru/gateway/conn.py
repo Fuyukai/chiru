@@ -7,6 +7,7 @@ from typing import Any
 
 import anyio
 import attr
+from anyio import WouldBlock
 from anyio.streams.memory import MemoryObjectSendStream, MemoryObjectReceiveStream
 from furl import furl
 from stickney import WebsocketClient, WebsocketClosedError
@@ -16,7 +17,8 @@ from stickney.frame import TextualMessage, BinaryMessage, CloseMessage
 from chiru.gateway.event import (
     IncomingGatewayEvent,
     OutgoingGatewayEvent,
-    GatewayDispatch,
+    GatewayDispatch, GatewayHello, GatewayReconnectRequested, GatewayHeartbeatSent,
+    GatewayHeartbeatAck, GatewayInvalidateSession,
 )
 
 INTENTS = (1 << 22) - 1
@@ -244,6 +246,17 @@ async def _super_loop(
             await wrapped.send_heartbeat(seq=shared_state.sequence)
             next_heartbeat_time = next_heartbeat_time + time_inbetween_heartbeats
             shared_state.heartbeat_number += 1
+
+            evt = GatewayHeartbeatSent(
+                shard_id=shared_state.shard_id,
+                heartbeat_count=shared_state.heartbeat_number,
+                sequence=shared_state.sequence
+            )
+            try:
+                event_channel.send_nowait(evt)
+            except WouldBlock:
+                pass
+
             continue
 
         # All incoming messages are WsMessages, all outgoing messages are not WsMessage.
@@ -317,13 +330,27 @@ async def _super_loop(
                     shard_count=shared_state.shard_count,
                 )
 
-            continue
+            evt = GatewayHello(
+                shard_id=shared_state.shard_id,
+                heartbeat_interval=time_inbetween_heartbeats
+            )
+            try:
+                event_channel.send_nowait(evt)
+            except WouldBlock:
+                pass
 
         elif opcode == GatewayOp.RECONNECT:
             # Discord wants us to reconnect. Okay.
 
             shared_state.logger.debug("SRV -> CLI: Reconnect")
             await ws.close(code=1001, reason="Gateway is reconnecting!")
+
+            evt = GatewayReconnectRequested(shard_id=shared_state.shard_id)
+            try:
+                event_channel.send_nowait(evt)
+            except WouldBlock:
+                pass
+
             raise WebsocketClosedError(code=1001, reason="Gateway is reconnecting!")
 
         elif opcode == GatewayOp.HEARTBEAT_ACK:
@@ -336,7 +363,16 @@ async def _super_loop(
                 f"Received heartbeat ack #{shared_state.heartbeat_acks}"
             )
             shared_state.heartbeat_acks += 1
-            continue
+
+            evt = GatewayHeartbeatAck(
+                shard_id=shared_state.shard_id,
+                heartbeat_ack_count=shared_state.heartbeat_acks
+            )
+
+            try:
+                event_channel.send_nowait(evt)
+            except WouldBlock:
+                pass
 
         elif opcode == GatewayOp.HEARTBEAT:
             # Occasionally, Discord asks us for a heartbeat. I don't really know why, but they do.
@@ -344,7 +380,17 @@ async def _super_loop(
 
             shared_state.logger.debug("SRV -> CLI: Heartbeat")
             await wrapped.send_heartbeat(seq=shared_state.sequence)
-            continue
+            shared_state.heartbeat_number += 1
+
+            evt = GatewayHeartbeatSent(
+                shard_id=shared_state.shard_id,
+                heartbeat_count=shared_state.heartbeat_number,
+                sequence=shared_state.sequence
+            )
+            try:
+                event_channel.send_nowait(evt)
+            except WouldBlock:
+                pass
 
         elif opcode == GatewayOp.DISPATCH:
             # Dispatches update the sequence data, which is needed for heartbeats.
@@ -404,6 +450,16 @@ async def _super_loop(
                     shard_id=shared_state.shard_id,
                     shard_count=shared_state.shard_count,
                 )
+
+            evt = GatewayInvalidateSession(
+                shard_id=shared_state.shard_id,
+                resumable=raw_data
+            )
+            try:
+                event_channel.send_nowait(evt)
+            except WouldBlock:
+                pass
+
 
         else:
             shared_state.logger.warning("Unknown event...")
