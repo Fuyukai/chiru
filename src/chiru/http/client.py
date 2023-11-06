@@ -134,10 +134,10 @@ class ChiruHttpClient(object):
 
                     response = await self._http.send(req)
                 except OSError as e:
-                    logger.debug(f"{method} {path} => (failed) (try {tries + 1})", e)
+                    logger.debug(f"{method} {path} => (failed) (try {tries + 1})", exc_info=e)
                     continue
                 except httpx.RequestError:
-                    logger.debug(f"{method} {path} => (failed) (try {tries + 1})", e)
+                    logger.debug(f"{method} {path} => (failed) (try {tries + 1})", exc_info=e)
                     continue
 
                 logger.debug(
