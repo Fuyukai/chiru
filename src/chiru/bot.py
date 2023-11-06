@@ -4,6 +4,7 @@ from typing import AsyncContextManager
 import anyio
 import httpx
 
+from chiru.event.factory import StatefulObjectFactory
 from chiru.gateway.collection import GatewayCollection
 from chiru.http.client import ChiruHttpClient
 from chiru.models.oauth import OAuthApplication
@@ -21,8 +22,17 @@ class ChiruBot(object):
         app: OAuthApplication,
         token: str,
     ):
+        #: The HTTP client that is used for making HTTP requests. This is pre-configured with
+        #: authentication and ratelimit support, and can be used directly to access endpoints that
+        #: are not otherwise exposed.
         self.http = http
+
+        #: The :class:`.OAuthApplication` that this bot is running under.
         self.app = app
+
+        #: The :class:`.StatefulObjectFactory` that can be used to create :ref:`stateful objects`
+        #: from raw response bodies.
+        self.stateful_factory = StatefulObjectFactory(self)
 
         self.__token = token
 

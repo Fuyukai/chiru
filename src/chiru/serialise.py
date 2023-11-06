@@ -1,6 +1,8 @@
+import arrow
 from cattrs import Converter
 from cattrs.preconf.json import configure_converter
 
+from chiru.models.message import RawMessage
 from chiru.models.oauth import OAuthApplication
 from chiru.models.user import RawUser
 
@@ -16,11 +18,13 @@ def create_cattrs_converter() -> Converter:
         prefer_attrib_converters=True,
     )
     configure_converter(converter)
+    converter.register_structure_hook(arrow.Arrow, lambda it, typ: arrow.get(it))
 
     RawUser.configure_converter(converter)
+    RawMessage.configure_converter(converter)
     OAuthApplication.configure_converter(converter)
 
     return converter
 
 
-CONVERTER = Converter()
+CONVERTER = create_cattrs_converter()

@@ -13,6 +13,7 @@ from httpx import AsyncClient, Response
 
 from chiru.http.ratelimit import RatelimitManager
 from chiru.http.response import GatewayResponse
+from chiru.models.message import RawMessage
 from chiru.models.oauth import OAuthApplication
 from chiru.serialise import CONVERTER
 
@@ -31,10 +32,13 @@ class Endpoints:
     Contains all of the endpoints used by the HTTP client.
     """
 
-    api_base = "/api/v10"
+    API_BASE = "/api/v10"
 
-    get_gateway = api_base + "/gateway/bot"
-    oauth2_me = api_base + "/applications/@me"
+    GET_GATEWAY = API_BASE + "/gateway/bot"
+    OAUTH2_ME = API_BASE + "/applications/@me"
+
+    CHANNEL = API_BASE + "/channels/{channel_id}"
+    CHANNEL_MESSAGES = CHANNEL + "/messages"
 
     def __init__(self, base_url: str = "https://discord.com"):
         self.base_url = base_url
@@ -179,7 +183,7 @@ class ChiruHttpClient(object):
         """
 
         resp = await self.request(
-            bucket="gateway", method="GET", path=self.endpoints.get_gateway
+            bucket="gateway", method="GET", path=Endpoints.GET_GATEWAY
         )
 
         return CONVERTER.structure(resp.json(), GatewayResponse)
@@ -190,7 +194,32 @@ class ChiruHttpClient(object):
         """
 
         resp = await self.request(
-            bucket="oauth2:me", method="GET", path=self.endpoints.oauth2_me
+            bucket="oauth2:me", method="GET", path=Endpoints.OAUTH2_ME
         )
 
         return CONVERTER.structure(resp.json(), OAuthApplication)
+
+    # TODO: Figure out some good way of representing allowed_mentions.
+    # TODO: Embeds.
+    # TODO: Interactions.
+    async def send_message(
+        self,
+        *,
+        channel_id: int,
+        content: str = None,
+    ) -> RawMessage:
+        """
+        Sends a single message to a channel.
+
+        :param channel_id: The ID of the channel to send the message to.
+        :param content: The textual content to send.
+        """
+
+        resp = await self.request(
+            bucket=f"send-message:{channel_id}",
+            method="POST",
+            path=Endpoints.CHANNEL_MESSAGES.format(channel_id=channel_id),
+            body_json={"content": content}
+        )
+
+        return CONVERTER.structure(resp.json(), RawMessage)
