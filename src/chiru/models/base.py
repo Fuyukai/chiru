@@ -7,6 +7,9 @@ import attr
 
 if TYPE_CHECKING:
     from chiru.bot import ChiruBot
+else:
+    # only used as a type annotation, it's fine.
+    ChiruBot = None
 
 DISCORD_EPOCH = 1420070400000
 
@@ -36,7 +39,7 @@ class StatefulMixin:
     A mixin that allows data classes to have a reference to the currently running client instance.
     """
 
-    _client = attr.ib(init=False)
+    _client: ChiruBot = attr.ib(init=False)
 
     def _chiru_set_client(self, bot: ChiruBot):
         self._client = bot
