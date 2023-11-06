@@ -6,6 +6,7 @@ import httpx
 
 from chiru.gateway.collection import GatewayCollection
 from chiru.http.client import ChiruHttpClient
+from chiru.http.response import GatewayResponse
 from chiru.models.factory import StatefulObjectFactory
 from chiru.models.oauth import OAuthApplication
 
@@ -20,6 +21,7 @@ class ChiruBot(object):
         *,
         http: ChiruHttpClient,
         app: OAuthApplication,
+        gw: GatewayResponse,
         token: str,
     ):
         #: The HTTP client that is used for making HTTP requests. This is pre-configured with
@@ -34,6 +36,9 @@ class ChiruBot(object):
         #: from raw response bodies.
         self.stateful_factory = StatefulObjectFactory(self)
 
+        #: The cached gateway response created when the bot opened.
+        self.cached_gateway_info: GatewayResponse = gw
+
         self.__token = token
 
     def start_receiving_events(
@@ -45,14 +50,15 @@ class ChiruBot(object):
 
         @asynccontextmanager
         async def _do():
-            gateway_info = await self.http.get_gateway_info()
-
             async with anyio.create_task_group() as nursery:
                 wrapper = GatewayCollection(
-                    nursery, self.__token, gateway_info.url, gateway_info.shards
+                    nursery,
+                    self.__token,
+                    self.cached_gateway_info.url,
+                    self.cached_gateway_info.shards
                 )
 
-                for shard in range(0, gateway_info.shards):
+                for shard in range(0, self.cached_gateway_info.shards):
                     wrapper._start_shard(shard)
 
                 try:
@@ -82,9 +88,10 @@ def open_bot(
                 httpx_client=httpx_client, nursery=http_nursery, token=token
             )
             app = await http.get_current_application_info()
+            gateway = await http.get_gateway_info()
 
             try:
-                yield ChiruBot(http=http, app=app, token=token)
+                yield ChiruBot(http=http, app=app, token=token, gw=gateway)
             finally:
                 http_nursery.cancel_scope.cancel()
 
