@@ -2,6 +2,7 @@ import logging
 from collections import defaultdict
 from contextlib import asynccontextmanager
 from functools import partial
+from pprint import pprint
 from typing import Any, AsyncGenerator, Awaitable, Callable, Type, TypeVar, overload
 
 import attr
@@ -77,6 +78,11 @@ class StatefulEventDispatcher:
         Spawns a single event into the nursery.
         """
 
+        if ctx is not None:
+            logger.debug(f"Dispatching event '{event_klass.__name__}' from shard {ctx.shard_id}")
+        else:
+            logger.debug(msg=f"Dispatching event '{event_klass.__name__}'")
+
         if ctx:
             fns = [
                 partial(self._run_safely, partial(fn, ctx, event))
@@ -130,6 +136,7 @@ class StatefulEventDispatcher:
                     await self._dispatch_event(type(dispatched), context, dispatched)
 
                 if not self._has_fired_all_ready and event.event_name == "READY":
+                    pprint(event.body)
                     self._ready_shards[event.shard_id] = True
 
                     if self._ready_shards.all():

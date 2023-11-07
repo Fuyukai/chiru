@@ -1,8 +1,8 @@
-
-from arrow import Arrow
 import attr
-from cattr import Converter, override
 import cattr
+from arrow import Arrow
+from cattr import Converter, override
+
 from chiru.models.base import DiscordObject, StatefulMixin
 from chiru.models.user import RawUser, User
 
@@ -17,12 +17,13 @@ class RawMember:
     def configure_converter(cls, converter: Converter):
         for klass in (cls, Member):
             converter.register_structure_hook(
-                klass, 
+                klass,
                 func=cattr.gen.make_dict_structure_fn(
-                    klass, converter, 
+                    klass,
+                    converter,
                     role_ids=override(rename="roles"),
                     _cattrs_forbid_extra_keys=False,
-                )
+                ),
             )
 
     # may be None e.g. on message objects
