@@ -64,7 +64,7 @@ class ChiruBot(object):
                     nursery,
                     self.__token,
                     self.cached_gateway_info.url,
-                    self.cached_gateway_info.shards
+                    self.cached_gateway_info.shards,
                 )
 
                 for shard in range(0, self.cached_gateway_info.shards):
@@ -93,9 +93,7 @@ def open_bot(
             httpx.AsyncClient() as httpx_client,
             anyio.create_task_group() as http_nursery,
         ):
-            http = ChiruHttpClient(
-                httpx_client=httpx_client, nursery=http_nursery, token=token
-            )
+            http = ChiruHttpClient(httpx_client=httpx_client, nursery=http_nursery, token=token)
             app = await http.get_current_application_info()
             gateway = await http.get_gateway_info()
 

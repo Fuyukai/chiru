@@ -79,10 +79,11 @@ class RawMessage(DiscordObject):
             converter.register_structure_hook(
                 klass,
                 make_dict_structure_fn(
-                    klass, converter,
+                    klass,
+                    converter,
                     raw_author=override(rename="author"),
                     _cattrs_forbid_extra_keys=False,
-                )
+                ),
             )
 
         converter.register_structure_hook(MessageType, lambda it, klass: MessageType(it))

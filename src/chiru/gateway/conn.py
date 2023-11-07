@@ -8,17 +8,20 @@ from typing import Any
 import anyio
 import attr
 from anyio import WouldBlock
-from anyio.streams.memory import MemoryObjectSendStream, MemoryObjectReceiveStream
+from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
 from furl import furl
-from stickney import WebsocketClient, WebsocketClosedError
-from stickney import open_ws_connection
-from stickney.frame import TextualMessage, BinaryMessage, CloseMessage
+from stickney import WebsocketClient, WebsocketClosedError, open_ws_connection
+from stickney.frame import BinaryMessage, CloseMessage, TextualMessage
 
 from chiru.gateway.event import (
+    GatewayDispatch,
+    GatewayHeartbeatAck,
+    GatewayHeartbeatSent,
+    GatewayHello,
+    GatewayInvalidateSession,
+    GatewayReconnectRequested,
     IncomingGatewayEvent,
     OutgoingGatewayEvent,
-    GatewayDispatch, GatewayHello, GatewayReconnectRequested, GatewayHeartbeatSent,
-    GatewayHeartbeatAck, GatewayInvalidateSession,
 )
 
 INTENTS = (1 << 22) - 1
@@ -239,9 +242,7 @@ async def _super_loop(
                 with anyio.move_on_after(delay=5):
                     await ws.close(code=4100, reason="Zombie!")
 
-                raise WebsocketClosedError(
-                    code=4100, reason="Zombie connection detected"
-                )
+                raise WebsocketClosedError(code=4100, reason="Zombie connection detected")
 
             await wrapped.send_heartbeat(seq=shared_state.sequence)
             next_heartbeat_time = next_heartbeat_time + time_inbetween_heartbeats
@@ -250,7 +251,7 @@ async def _super_loop(
             evt = GatewayHeartbeatSent(
                 shard_id=shared_state.shard_id,
                 heartbeat_count=shared_state.heartbeat_number,
-                sequence=shared_state.sequence
+                sequence=shared_state.sequence,
             )
             try:
                 event_channel.send_nowait(evt)
@@ -310,9 +311,7 @@ async def _super_loop(
             time_inbetween_heartbeats: float = raw_data["heartbeat_interval"] / 1000.0
             shared_state.logger.debug("SRV -> CLI: Hello")
 
-            shared_state.logger.info(
-                f"Heartbeating every {time_inbetween_heartbeats} seconds..."
-            )
+            shared_state.logger.info(f"Heartbeating every {time_inbetween_heartbeats} seconds...")
             shared_state.logger.debug(f"Trace: {raw_data.get('_trace')}")
 
             if shared_state.session_id is not None:
@@ -331,8 +330,7 @@ async def _super_loop(
                 )
 
             evt = GatewayHello(
-                shard_id=shared_state.shard_id,
-                heartbeat_interval=time_inbetween_heartbeats
+                shard_id=shared_state.shard_id, heartbeat_interval=time_inbetween_heartbeats
             )
             try:
                 event_channel.send_nowait(evt)
@@ -359,14 +357,11 @@ async def _super_loop(
             shared_state.logger.debug(
                 f"SRV -> CLI: Heartbeat Ack (count: {shared_state.heartbeat_acks})"
             )
-            shared_state.logger.debug(
-                f"Received heartbeat ack #{shared_state.heartbeat_acks}"
-            )
+            shared_state.logger.debug(f"Received heartbeat ack #{shared_state.heartbeat_acks}")
             shared_state.heartbeat_acks += 1
 
             evt = GatewayHeartbeatAck(
-                shard_id=shared_state.shard_id,
-                heartbeat_ack_count=shared_state.heartbeat_acks
+                shard_id=shared_state.shard_id, heartbeat_ack_count=shared_state.heartbeat_acks
             )
 
             try:
@@ -385,7 +380,7 @@ async def _super_loop(
             evt = GatewayHeartbeatSent(
                 shard_id=shared_state.shard_id,
                 heartbeat_count=shared_state.heartbeat_number,
-                sequence=shared_state.sequence
+                sequence=shared_state.sequence,
             )
             try:
                 event_channel.send_nowait(evt)
@@ -400,9 +395,7 @@ async def _super_loop(
             shared_state.sequence = seq
 
             dispatch_name = decoded_content["t"]
-            shared_state.logger.debug(
-                f"SRV -> CLI: Dispatch (evt: {dispatch_name}, seq: {seq})"
-            )
+            shared_state.logger.debug(f"SRV -> CLI: Dispatch (evt: {dispatch_name}, seq: {seq})")
 
             if dispatch_name == "READY":
                 id = raw_data["user"]["id"]
@@ -430,9 +423,7 @@ async def _super_loop(
             # Note that in some cases when there's an outage, we will get stuck in a loop of
             # IDENTIFY -> INVALIDATE_SESSION -> IDENTIFY -> ...
 
-            shared_state.logger.debug(
-                f"SRV -> CLI: Invalidate Session (resumable: {raw_data})"
-            )
+            shared_state.logger.debug(f"SRV -> CLI: Invalidate Session (resumable: {raw_data})")
 
             if raw_data:
                 # We can send a RESUME, so let's do so...
@@ -451,15 +442,11 @@ async def _super_loop(
                     shard_count=shared_state.shard_count,
                 )
 
-            evt = GatewayInvalidateSession(
-                shard_id=shared_state.shard_id,
-                resumable=raw_data
-            )
+            evt = GatewayInvalidateSession(shard_id=shared_state.shard_id, resumable=raw_data)
             try:
                 event_channel.send_nowait(evt)
             except WouldBlock:
                 pass
-
 
         else:
             shared_state.logger.warning("Unknown event...")
@@ -496,9 +483,7 @@ async def run_gateway_loop(
     while True:
         parsed_url = furl(shared_state.reconnect_url)
         parsed_url.query.params = {"version": "10", "encoding": "json"}
-        shared_state.logger.info(
-            f"Opening new WebSocket connection to {str(parsed_url)}"
-        )
+        shared_state.logger.info(f"Opening new WebSocket connection to {str(parsed_url)}")
 
         async with (
             open_ws_connection(str(parsed_url)) as ws,
@@ -521,8 +506,7 @@ async def run_gateway_loop(
                         raise RuntimeError(PRIVILEGED_INTENTS_MESSAGE)
                     case _:
                         shared_state.logger.warning(
-                            f"Received unexpected close {e.code} ({e.reason}),"
-                            " reconnecting..."
+                            f"Received unexpected close {e.code} ({e.reason}), reconnecting..."
                         )
             finally:
                 # kill both the pumping tasks, close the websocket, and retry.

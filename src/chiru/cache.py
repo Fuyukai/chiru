@@ -8,4 +8,3 @@ class ObjectCache:
     """
     Caches certain Discord objects to avoid needing to constantly re-create them.
     """
-

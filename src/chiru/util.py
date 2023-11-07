@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from typing import TypeVar, Type, AsyncContextManager
+from typing import AsyncContextManager, Type, TypeVar
 
 import anyio
-from anyio import CapacityLimiter, CancelScope
+from anyio import CancelScope, CapacityLimiter
 from anyio.abc import TaskGroup
 from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
 

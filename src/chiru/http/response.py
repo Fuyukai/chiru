@@ -1,6 +1,5 @@
 import attr
-from cattrs import GenConverter, Converter
-
+from cattrs import Converter, GenConverter
 from cattrs.preconf.json import configure_converter
 
 

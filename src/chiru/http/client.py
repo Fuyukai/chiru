@@ -73,9 +73,7 @@ class ChiruHttpClient(object):
         self._http.headers.update(
             {
                 "Authorization": f"Bot {token}",
-                "User-Agent": (
-                    f"DiscordBot (https://github.com/TBD/TBD, {package_version})"
-                ),
+                "User-Agent": f"DiscordBot (https://github.com/TBD/TBD, {package_version})",
             }
         )
         self._http.base_url = self.endpoints.base_url
@@ -140,25 +138,21 @@ class ChiruHttpClient(object):
                     logger.debug(f"{method} {path} => (failed) (try {tries + 1})", exc_info=e)
                     continue
 
-                logger.debug(
-                    f"{method} {path} => {response.status_code} (try {tries + 1})"
-                )
+                logger.debug(f"{method} {path} => {response.status_code} (try {tries + 1})")
 
                 # Back in 2016, Discord would return 502s constantly on random requests.
                 # I don't know if this is still the case in 2023, but I see no reason not to keep
                 # it. Just backoff and retry.
                 # Actually, I just got a 500 so I'm going to keep the handling in anyway.
                 if 500 <= response.status_code <= 504:
-                    sleep_time = 2**(tries + 1)
+                    sleep_time = 2 ** (tries + 1)
                     logger.warning(
                         f"Server-side error when requesting {path}, waiting for {sleep_time}s"
                     )
                     await anyio.sleep(sleep_time)
                     continue
 
-                is_global = (
-                    response.headers.get("X-RateLimit-Global", "").lower() == "true"
-                )
+                is_global = response.headers.get("X-RateLimit-Global", "").lower() == "true"
 
                 if response.status_code == 429:
                     # Uh oh spaghetti-os!
@@ -186,9 +180,7 @@ class ChiruHttpClient(object):
         Gets the gateway info that the current bot should connect.
         """
 
-        resp = await self.request(
-            bucket="gateway", method="GET", path=Endpoints.GET_GATEWAY
-        )
+        resp = await self.request(bucket="gateway", method="GET", path=Endpoints.GET_GATEWAY)
 
         return CONVERTER.structure(resp.json(), GatewayResponse)
 
@@ -197,9 +189,7 @@ class ChiruHttpClient(object):
         Gets the application info about the current bot's application.
         """
 
-        resp = await self.request(
-            bucket="oauth2:me", method="GET", path=Endpoints.OAUTH2_ME
-        )
+        resp = await self.request(bucket="oauth2:me", method="GET", path=Endpoints.OAUTH2_ME)
 
         return CONVERTER.structure(resp.json(), OAuthApplication)
 
@@ -223,7 +213,7 @@ class ChiruHttpClient(object):
             bucket=f"send-message:{channel_id}",
             method="POST",
             path=Endpoints.CHANNEL_MESSAGES.format(channel_id=channel_id),
-            body_json={"content": content}
+            body_json={"content": content},
         )
 
         return CONVERTER.structure(resp.json(), RawMessage)

@@ -2,7 +2,7 @@ import logging
 from collections import defaultdict
 from contextlib import asynccontextmanager
 from functools import partial
-from typing import AsyncGenerator, Callable, Type, TypeVar, overload, Awaitable, Any
+from typing import Any, AsyncGenerator, Awaitable, Callable, Type, TypeVar, overload
 
 import attr
 import bitarray
@@ -10,7 +10,7 @@ import bitarray
 from chiru.bot import ChiruBot
 from chiru.event.model import DispatchedEvent
 from chiru.event.parser import CachedEventParser
-from chiru.gateway.event import IncomingGatewayEvent, GatewayDispatch
+from chiru.gateway.event import GatewayDispatch, IncomingGatewayEvent
 from chiru.util import CapacityLimitedNursery, open_limiting_nursery
 
 GwEventT = TypeVar("GwEventT", bound=IncomingGatewayEvent)
@@ -56,7 +56,7 @@ class StatefulEventDispatcher:
         self._events = defaultdict(list)
 
         # use a string here bc the default is "uninitialised" (wtf could that mean?)
-        self._ready_shards = bitarray.bitarray('0' * bot.cached_gateway_info.shards)
+        self._ready_shards = bitarray.bitarray("0" * bot.cached_gateway_info.shards)
 
         self._has_fired_all_ready = False
 
@@ -79,9 +79,8 @@ class StatefulEventDispatcher:
 
         if ctx:
             fns = [
-                partial(
-                    self._run_safely, partial(fn, ctx, event)
-                ) for fn in self._events[event_klass]
+                partial(self._run_safely, partial(fn, ctx, event))
+                for fn in self._events[event_klass]
             ]
         else:
             fns = [
@@ -91,24 +90,17 @@ class StatefulEventDispatcher:
         for fn in fns:
             await self._nursery.start(fn)
 
-
     @overload
     def add_event_handler(
         self, event: Type[GwEventT], handler: Callable[[GwEventT], Awaitable[None]]
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @overload
     def add_event_handler(
-        self,
-        event: Type[DsEventT],
-        handler: Callable[[EventContext, DsEventT], Awaitable[None]]
-    ) -> None:
-        ...
+        self, event: Type[DsEventT], handler: Callable[[EventContext, DsEventT], Awaitable[None]]
+    ) -> None: ...
 
-    def add_event_handler(
-        self, event, handler
-    ):
+    def add_event_handler(self, event, handler):
         """
         Adds an event handler for a low-level gateway event.
         """
@@ -131,9 +123,7 @@ class StatefulEventDispatcher:
                     continue
 
                 context = EventContext(
-                    shard_id=event.shard_id,
-                    dispatch_name=event.event_name,
-                    sequence=event.sequence
+                    shard_id=event.shard_id, dispatch_name=event.event_name, sequence=event.sequence
                 )
 
                 for dispatched in self._parser.get_parsed_events(client.stateful_factory, event):
@@ -149,9 +139,7 @@ class StatefulEventDispatcher:
 
 @asynccontextmanager
 async def create_stateful_dispatcher(
-    bot: ChiruBot,
-    *,
-    max_tasks: int = 16
+    bot: ChiruBot, *, max_tasks: int = 16
 ) -> AsyncGenerator[StatefulEventDispatcher, None]:
     """
     Creates a new :class:`.StatefulEventDispatcher`.

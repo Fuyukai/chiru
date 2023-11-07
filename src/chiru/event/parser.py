@@ -2,7 +2,7 @@ from pprint import pprint
 from typing import List
 
 from chiru.cache import ObjectCache
-from chiru.event.model import DispatchedEvent, Connected, MessageCreate
+from chiru.event.model import Connected, DispatchedEvent, MessageCreate
 from chiru.gateway.event import GatewayDispatch
 from chiru.models.factory import StatefulObjectFactory
 
@@ -20,9 +20,7 @@ class CachedEventParser:
         self._cache = cache
 
     def get_parsed_events(
-        self,
-        factory: StatefulObjectFactory,
-        event: GatewayDispatch
+        self, factory: StatefulObjectFactory, event: GatewayDispatch
     ) -> List[DispatchedEvent]:
         """
         Gets a list of parsed events from the provided :class:`.GatewayDispatch` gateway event.

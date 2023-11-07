@@ -48,9 +48,7 @@ class Ratelimit(object):
     Handles ratelimiting for a single bucket.
     """
 
-    def __init__(
-        self, bucket: Tuple[str, str], manager: RatelimitManager, nursery: TaskGroup
-    ):
+    def __init__(self, bucket: Tuple[str, str], manager: RatelimitManager, nursery: TaskGroup):
         self._scopes: set[CancelScope] = set()
         self._manager = manager
         self._bucket = bucket
@@ -96,16 +94,12 @@ class Ratelimit(object):
                 # run this repeatedly so that if discord changes their mind about the ratelimit, we
                 # don't wake up early.
                 while self._wakeup_time >= anyio.current_time():
-                    logger.info(
-                        f"Ratelimit {self._bucket} will reset at {self._wakeup_time}"
-                    )
+                    logger.info(f"Ratelimit {self._bucket} will reset at {self._wakeup_time}")
                     await anyio.sleep_until(self._wakeup_time)
 
                 # refill the semaphore to max.
                 to_refill = (
-                    self._max_count
-                    - self._semaphore.value
-                    - self._requests_still_processing
+                    self._max_count - self._semaphore.value - self._requests_still_processing
                 )
                 logger.info(f"Resetting {to_refill} tokens for {self._bucket}")
                 for _ in range(0, to_refill):

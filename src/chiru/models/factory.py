@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, Mapping
 from chiru.cache import ObjectCache
 from chiru.models.message import Message
 from chiru.models.user import User
-from chiru.serialise import create_chiru_converter, CONVERTER
+from chiru.serialise import CONVERTER, create_chiru_converter
 
 if TYPE_CHECKING:
     from chiru.bot import ChiruBot

@@ -11,7 +11,6 @@ from chiru.gateway.conn import run_gateway_loop
 from chiru.gateway.event import IncomingGatewayEvent, OutgoingGatewayEvent
 from chiru.util import open_channel_pair
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -30,13 +29,7 @@ class GatewayCollection:
     Wraps a series of running gateway tasks
     """
 
-    def __init__(
-        self,
-        nursery: TaskGroup,
-        token: str,
-        initial_url: str,
-        shard_count: int
-    ):
+    def __init__(self, nursery: TaskGroup, token: str, initial_url: str, shard_count: int):
         #: The list of (shard id -> outgoing event) for all the connected gateways.
         self._gateway_ctl_channels: list[GatewayWrapper | None] = [None] * shard_count
 
@@ -69,7 +62,7 @@ class GatewayCollection:
                     shard_id=shard_id,
                     shard_count=self._shard_count,
                     outbound_channel=outbound_read,
-                    inbound_channel=event_channel
+                    inbound_channel=event_channel,
                 )
             finally:
                 logger.debug(f"Terminated gateway connection for shard {shard_id}")
