@@ -6,7 +6,7 @@ from cattrs import Converter
 from cattrs.gen import make_dict_structure_fn, override
 
 from chiru.models.base import DiscordObject, StatefulMixin
-from chiru.models.user import RawUser
+from chiru.models.user import RawUser, User
 
 
 # If only Python enums didn't suck!
@@ -81,7 +81,6 @@ class RawMessage(DiscordObject):
                 make_dict_structure_fn(
                     klass,
                     converter,
-                    raw_author=override(rename="author"),
                     _cattrs_forbid_extra_keys=False,
                 ),
             )
@@ -91,8 +90,8 @@ class RawMessage(DiscordObject):
     #: The Snowflake ID of the channel that this message was sent in.
     channel_id: int = attr.ib()
 
-    #: The raw author for this message.
-    raw_author: RawUser = attr.ib()
+    #: The author :class:`.RawUser` for this message.
+    author: RawUser = attr.ib()
 
     #: The content of this message.
     content: str = attr.ib()
@@ -106,4 +105,6 @@ class RawMessage(DiscordObject):
 
 @attr.s(slots=True)
 class Message(RawMessage, StatefulMixin):
-    pass
+    #: The author :class:`.User` for this message.
+    author: User = attr.ib()
+
