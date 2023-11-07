@@ -41,5 +41,11 @@ class StatefulObjectFactory:
 
         obb = CONVERTER.structure(message_data, Message)
         obb._chiru_set_client(self._client)
+
+        # fill child fields
         obb.author._chiru_set_client(bot=self._client)
+        if obb.member:
+            obb.member._chiru_set_client(bot=self._client)
+
+
         return obb

@@ -6,6 +6,7 @@ from cattrs import Converter
 from cattrs.gen import make_dict_structure_fn, override
 
 from chiru.models.base import DiscordObject, StatefulMixin
+from chiru.models.member import Member, RawMember
 from chiru.models.user import RawUser, User
 
 
@@ -102,9 +103,14 @@ class RawMessage(DiscordObject):
     #: The type of message this is.
     type: MessageType = attr.ib()
 
+    #: The member data for this message. May be empty for non-Guild members or webhooks.
+    member: RawMember | None = attr.ib(default=None)
+
 
 @attr.s(slots=True)
 class Message(RawMessage, StatefulMixin):
     #: The author :class:`.User` for this message.
     author: User = attr.ib()
 
+    #: The member data for this message. May be empty for non-Guild members or webhooks.
+    member: Member | None = attr.ib(default=None)
