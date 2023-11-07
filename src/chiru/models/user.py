@@ -1,6 +1,6 @@
 import attr
 import cattrs
-from cattrs.gen import make_dict_unstructure_fn, make_dict_structure_fn
+from cattrs.gen import make_dict_structure_fn
 
 from chiru.models.base import DiscordObject, StatefulMixin
 

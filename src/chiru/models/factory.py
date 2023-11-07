@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Mapping
 
+from chiru.cache import ObjectCache
 from chiru.models.message import Message
 from chiru.models.user import User
-from chiru.serialise import CONVERTER
+from chiru.serialise import create_chiru_converter, CONVERTER
 
 if TYPE_CHECKING:
     from chiru.bot import ChiruBot
@@ -19,7 +20,12 @@ class StatefulObjectFactory:
     def __init__(self, client: ChiruBot):
         self._client = client
 
-    def make_user(self, user_data: Mapping[str, Any]) -> User:
+        self.object_cache = ObjectCache()
+
+    def make_user(
+        self,
+        user_data: Mapping[str, Any],
+    ) -> User:
         """
         Creates a new stateful :class:`.User`.
         """

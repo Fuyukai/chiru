@@ -7,7 +7,7 @@ from chiru.models.oauth import OAuthApplication
 from chiru.models.user import RawUser
 
 
-def create_cattrs_converter() -> Converter:
+def create_chiru_converter() -> Converter:
     """
     Creates a ``cattrs`` converter for deserialising Discord objects.
     """
@@ -27,4 +27,4 @@ def create_cattrs_converter() -> Converter:
     return converter
 
 
-CONVERTER = create_cattrs_converter()
+CONVERTER = create_chiru_converter()

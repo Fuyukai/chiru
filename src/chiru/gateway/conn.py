@@ -298,7 +298,7 @@ async def _super_loop(
             continue
 
         opcode = GatewayOp(decoded_content["op"])
-        raw_data: Any | None = decoded_content["d"]
+        raw_data: Any = decoded_content["d"]
 
         # The "core" of any bot, the gateway operation switch.
 
@@ -307,7 +307,7 @@ async def _super_loop(
             # log in to the remote connection.
             has_received_hello = True
 
-            time_inbetween_heartbeats = raw_data["heartbeat_interval"] / 1000.0
+            time_inbetween_heartbeats: float = raw_data["heartbeat_interval"] / 1000.0
             shared_state.logger.debug("SRV -> CLI: Hello")
 
             shared_state.logger.info(
@@ -438,7 +438,7 @@ async def _super_loop(
                 # We can send a RESUME, so let's do so...
                 await wrapped.send_resume(
                     token=shared_state.token,
-                    session_id=shared_state.session_id,
+                    session_id=shared_state.session_id,  # type: ignore
                     seq=shared_state.sequence,
                 )
             else:
@@ -504,9 +504,7 @@ async def run_gateway_loop(
             open_ws_connection(str(parsed_url)) as ws,
             anyio.create_task_group() as nursery,
         ):
-            read: MemoryObjectSendStream
-            write: MemoryObjectSendStream
-            write, read = anyio.create_memory_object_stream()
+            write, read = anyio.create_memory_object_stream[Any]()
 
             nursery.start_soon(partial(_gw_receive_pump, ws, write))
             nursery.start_soon(partial(_gw_send_pump, outbound_channel, write))

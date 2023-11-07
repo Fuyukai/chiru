@@ -8,7 +8,7 @@ from chiru.models.base import DiscordObject
 from chiru.models.user import RawUser
 
 
-@attr.s(frozen=True, slots=True, kw_only=True)
+@attr.s(slots=True, kw_only=True)
 class OAuthApplication(DiscordObject):
     """
     A single OAuth2 application, with a bot user.

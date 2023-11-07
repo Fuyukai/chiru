@@ -36,7 +36,11 @@ class DiscordObject:
 @attr.s(kw_only=True)
 class StatefulMixin:
     """
-    A mixin that allows data classes to have a reference to the currently running client instance.
+    A mixin that allows model classes to have a reference to the currently running client instance.
+
+    Compared to raw models, stateful models can perform actions on the client directly via their
+    own instance methods. Raw models only provide IDs of other models that the objects depend on,
+    whereas stateful models can directly look up
     """
 
     _client: ChiruBot = attr.ib(init=False)

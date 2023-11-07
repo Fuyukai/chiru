@@ -97,9 +97,9 @@ class ChiruHttpClient(object):
         bucket: str,
         method: str,
         path: str,
-        form_data: Mapping[str, str] = None,
-        body_json: Mapping[str, Any] = None,
-        reason: str = None,
+        form_data: Mapping[str, str] | None = None,
+        body_json: Mapping[str, Any] | None = None,
+        reason: str | None = None,
     ) -> Response:
         """
         Performs a request to the specified endpoint path. This will automatically deal with
@@ -136,7 +136,7 @@ class ChiruHttpClient(object):
                 except OSError as e:
                     logger.debug(f"{method} {path} => (failed) (try {tries + 1})", exc_info=e)
                     continue
-                except httpx.RequestError:
+                except httpx.RequestError as e:
                     logger.debug(f"{method} {path} => (failed) (try {tries + 1})", exc_info=e)
                     continue
 
@@ -146,9 +146,13 @@ class ChiruHttpClient(object):
 
                 # Back in 2016, Discord would return 502s constantly on random requests.
                 # I don't know if this is still the case in 2023, but I see no reason not to keep
-                # it. Just exponentially backoff and retry.
-                if response.status_code == 502:
-                    sleep_time = 1 + (tries * 2)
+                # it. Just backoff and retry.
+                # Actually, I just got a 500 so I'm going to keep the handling in anyway.
+                if 500 <= response.status_code <= 504:
+                    sleep_time = 2**(tries + 1)
+                    logger.warning(
+                        f"Server-side error when requesting {path}, waiting for {sleep_time}s"
+                    )
                     await anyio.sleep(sleep_time)
                     continue
 
@@ -206,7 +210,7 @@ class ChiruHttpClient(object):
         self,
         *,
         channel_id: int,
-        content: str = None,
+        content: str | None = None,
     ) -> RawMessage:
         """
         Sends a single message to a channel.

@@ -4,6 +4,7 @@ from typing import AsyncContextManager
 import anyio
 import httpx
 
+from chiru.cache import ObjectCache
 from chiru.gateway.collection import GatewayCollection
 from chiru.http.client import ChiruHttpClient
 from chiru.http.response import GatewayResponse
@@ -40,6 +41,14 @@ class ChiruBot(object):
         self.cached_gateway_info: GatewayResponse = gw
 
         self.__token = token
+
+    @property
+    def object_cache(self) -> ObjectCache:
+        """
+        The :class:`.ObjectCache` that this bot owns.
+        """
+
+        return self.stateful_factory.object_cache
 
     def start_receiving_events(
         self,
