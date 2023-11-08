@@ -136,7 +136,6 @@ class StatefulEventDispatcher:
                     await self._dispatch_event(type(dispatched), context, dispatched)
 
                 if not self._has_fired_all_ready and event.event_name == "READY":
-                    pprint(event.body)
                     self._ready_shards[event.shard_id] = True
 
                     if self._ready_shards.all():
