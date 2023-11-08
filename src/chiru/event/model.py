@@ -1,4 +1,4 @@
-import abc
+from typing import final
 
 import attr
 
@@ -6,18 +6,20 @@ from chiru.models.guild import Guild
 from chiru.models.message import Message
 
 
-class DispatchedEvent(abc.ABC):
+class DispatchedEvent:
     """
     Marker interface for dispatched events.
     """
 
 
+@final
 class Connected(DispatchedEvent):
     """
     Published when a single shard has successfully connected to the gateway.
     """
 
 
+@final
 @attr.s(slots=True, frozen=True)
 class GuildStreamed(DispatchedEvent):
     """
@@ -28,6 +30,7 @@ class GuildStreamed(DispatchedEvent):
     guild: Guild = attr.ib()
 
 
+@final
 @attr.s(slots=True, frozen=True)
 class GuildJoined(DispatchedEvent):
     """
@@ -38,6 +41,7 @@ class GuildJoined(DispatchedEvent):
     guild: Guild = attr.ib()
 
 
+@final
 @attr.s(slots=True, frozen=True)
 class GuildAvailable(DispatchedEvent):
     """
@@ -48,6 +52,7 @@ class GuildAvailable(DispatchedEvent):
     guild: Guild = attr.ib()
 
 
+@final
 @attr.s(frozen=True, slots=True, kw_only=True)
 class MessageCreate(DispatchedEvent):
     """

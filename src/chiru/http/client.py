@@ -6,7 +6,6 @@ from math import ceil
 from typing import Any, Mapping, overload
 
 import anyio
-import attr
 import httpx
 from anyio.abc import TaskGroup
 from httpx import AsyncClient, Response
@@ -45,7 +44,7 @@ class Endpoints:
         self.base_url = base_url
 
 
-class ChiruHttpClient(object):
+class ChiruHttpClient:
     """
     Wrapper around the various Discord HTTP actions.
     """
@@ -56,7 +55,7 @@ class ChiruHttpClient(object):
         nursery: TaskGroup,
         httpx_client: AsyncClient,
         token: str,
-        endpoints: Endpoints = Endpoints(),
+        endpoints: Endpoints | None = None,
     ):
         """
         :param nursery: The task group to spawn
@@ -67,7 +66,7 @@ class ChiruHttpClient(object):
         :param endpoints: The namespace of API endpoints to use for routes.
         """
 
-        self.endpoints = endpoints
+        self.endpoints = endpoints or Endpoints()
         self._http = httpx_client
 
         package_version = version("chiru")
@@ -202,7 +201,11 @@ class ChiruHttpClient(object):
 
     @overload
     async def send_message(
-        self, *, channel_id: int, content: str | None, factory: StatefulObjectFactory | None = None
+        self,
+        *,
+        channel_id: int,
+        content: str | None,
+        factory: StatefulObjectFactory | None = None,
     ) -> Message: ...
 
     async def send_message(

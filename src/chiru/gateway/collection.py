@@ -5,7 +5,7 @@ from typing import AsyncIterator
 import attr
 from anyio import CancelScope
 from anyio.abc import TaskGroup
-from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
+from anyio.streams.memory import MemoryObjectSendStream
 
 from chiru.gateway.conn import run_gateway_loop
 from chiru.gateway.event import IncomingGatewayEvent, OutgoingGatewayEvent

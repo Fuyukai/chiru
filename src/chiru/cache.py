@@ -17,9 +17,9 @@ class ObjectCache:
     Caches certain Discord objects to avoid needing to constantly re-create them.
     """
 
-    guilds: dict[int, UnavailableGuild | Guild] = {}
+    guilds: dict[int, UnavailableGuild | Guild] = attr.ib(factory=dict)
 
-    dm_channels: dict[int, Channel] = {}
+    dm_channels: dict[int, Channel] = attr.ib(factory=dict)
 
     def get_available_guild(self, guild_id: int) -> Guild | None:
         """
@@ -43,7 +43,7 @@ class ObjectCache:
         except KeyError:
             pass
 
-        for id, guild in self.guilds.items():
+        for _id, guild in self.guilds.items():
             if guild.unavailable:
                 continue
 

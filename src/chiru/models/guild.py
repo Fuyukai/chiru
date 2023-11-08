@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from functools import partial
-from typing import TYPE_CHECKING, Any, Mapping, Type, TypeVar, final
+from typing import TYPE_CHECKING, Any, Mapping, TypeVar, final
 
 import attr
 import cattr
@@ -119,7 +119,7 @@ class RawGuild(DiscordObject):
     def unmap_to_id(
         converter: Converter,
         data: Any,
-        provided_type: Type[DObjT],
+        provided_type: type[DObjT],
     ) -> Mapping[int, DObjT]:
         items = [converter.structure(item, provided_type) for item in data]
 

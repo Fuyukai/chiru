@@ -2,7 +2,6 @@ import logging
 from collections import defaultdict
 from contextlib import asynccontextmanager
 from functools import partial
-from pprint import pprint
 from typing import Any, AsyncGenerator, Awaitable, Callable, Type, TypeVar, overload
 
 import attr
@@ -103,7 +102,9 @@ class StatefulEventDispatcher:
 
     @overload
     def add_event_handler(
-        self, event: Type[DsEventT], handler: Callable[[EventContext, DsEventT], Awaitable[None]]
+        self,
+        event: Type[DsEventT],
+        handler: Callable[[EventContext, DsEventT], Awaitable[None]],
     ) -> None: ...
 
     def add_event_handler(self, event, handler):
@@ -129,7 +130,9 @@ class StatefulEventDispatcher:
                     continue
 
                 context = EventContext(
-                    shard_id=event.shard_id, dispatch_name=event.event_name, sequence=event.sequence
+                    shard_id=event.shard_id,
+                    dispatch_name=event.event_name,
+                    sequence=event.sequence,
                 )
 
                 for dispatched in self._parser.get_parsed_events(client.stateful_factory, event):

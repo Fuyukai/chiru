@@ -12,7 +12,7 @@ from chiru.models.factory import StatefulObjectFactory
 from chiru.models.oauth import OAuthApplication
 
 
-class ChiruBot(object):
+class ChiruBot:
     """
     The primary bot class.
     """

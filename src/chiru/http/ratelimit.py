@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 from contextlib import asynccontextmanager
-from typing import Tuple
 
 import anyio
 from anyio import CancelScope
@@ -11,16 +10,16 @@ from anyio.abc import TaskGroup
 logger = logging.getLogger(__name__)
 
 
-class RatelimitManager(object):
+class RatelimitManager:
     """
     Handles Ratelimit objects.
     """
 
     def __init__(self, nursery: TaskGroup):
-        self._ratelimits: dict[Tuple[str, str], Ratelimit] = {}
+        self._ratelimits: dict[tuple[str, str], Ratelimit] = {}
         self._nursery = nursery
 
-    def _task_got_too_lonely(self, bucket: Tuple[str, str]):
+    def _task_got_too_lonely(self, bucket: tuple[str, str]):
         logger.debug(f"Discarding ratelimit for bucket {bucket} due to timeout")
 
         rl = self._ratelimits.pop(bucket, None)
@@ -30,7 +29,7 @@ class RatelimitManager(object):
             for scope in rl._scopes:
                 scope.cancel()
 
-    def get_ratelimit_for_bucket(self, bucket: Tuple[str, str]) -> Ratelimit:
+    def get_ratelimit_for_bucket(self, bucket: tuple[str, str]) -> Ratelimit:
         """
         Gets the :class:`.Ratelimit` instance for the specified bucket.
         """
@@ -43,12 +42,12 @@ class RatelimitManager(object):
         return rl
 
 
-class Ratelimit(object):
+class Ratelimit:
     """
     Handles ratelimiting for a single bucket.
     """
 
-    def __init__(self, bucket: Tuple[str, str], manager: RatelimitManager, nursery: TaskGroup):
+    def __init__(self, bucket: tuple[str, str], manager: RatelimitManager, nursery: TaskGroup):
         self._scopes: set[CancelScope] = set()
         self._manager = manager
         self._bucket = bucket

@@ -1,4 +1,3 @@
-from pprint import pprint
 from typing import List
 
 from chiru.cache import ObjectCache
@@ -11,9 +10,8 @@ from chiru.event.model import (
     MessageCreate,
 )
 from chiru.gateway.event import GatewayDispatch
-from chiru.models import guild
 from chiru.models.factory import StatefulObjectFactory
-from chiru.models.guild import Guild, UnavailableGuild
+from chiru.models.guild import UnavailableGuild
 
 
 class CachedEventParser:

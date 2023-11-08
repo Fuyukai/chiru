@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from typing import AsyncContextManager, Type, TypeVar
+from typing import AsyncContextManager, TypeVar
 
 import anyio
 from anyio import CancelScope, CapacityLimiter
@@ -12,7 +12,7 @@ ItemT = TypeVar("ItemT")
 
 
 def open_channel_pair(
-    buffer_size: float = 0, *, item_type: Type[ItemT]
+    buffer_size: float = 0, *, item_type: type[ItemT]
 ) -> tuple[MemoryObjectReceiveStream[ItemT], MemoryObjectSendStream[ItemT]]:
     """
     Helper function because anyio's ``create_memory_object_stream`` is kinda hacky and PyCharm

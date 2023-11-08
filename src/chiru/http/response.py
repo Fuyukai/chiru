@@ -1,6 +1,4 @@
 import attr
-from cattrs import Converter, GenConverter
-from cattrs.preconf.json import configure_converter
 
 
 @attr.s(frozen=True, kw_only=True, slots=True)

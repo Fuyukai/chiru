@@ -13,7 +13,7 @@ from chiru.models.guild import (
 from chiru.models.member import Member
 from chiru.models.message import Message
 from chiru.models.user import User
-from chiru.serialise import CONVERTER, create_chiru_converter
+from chiru.serialise import CONVERTER
 
 if TYPE_CHECKING:
     from chiru.bot import ChiruBot

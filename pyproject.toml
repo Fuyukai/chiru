@@ -21,15 +21,34 @@ bitarray = "^2.8.2"
 line-length = 100
 target-version = ["py311"]
 
-[tool.isort]
-profile = "black"
-src_paths = ["src"]
+[tool.ruff]
+src = ["src/chiru"]
+line-length = 100
 
+
+select = [
+  "RUF", 
+  "F", 
+  "E", 
+  "W",
+  "I", 
+  "UP", 
+  "B",  
+  "YTT", 
+  "ASYNC",
+  "TRIO", 
+  "PYI", 
+  "SIM", 
+  "RET",
+]
+
+[tool.ruff.isort]
+combine-as-imports = true
 
 [tool.poetry.group.dev.dependencies]
 trio = "^0.23.0"
 black = "^23.10.1"
-isort = "^5.12.0"
+ruff = "^0.1.4"
 
 [build-system]
 requires = ["poetry-core"]

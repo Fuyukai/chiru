@@ -1,3 +1,4 @@
+import contextlib
 import enum
 import json
 import logging
@@ -127,7 +128,7 @@ class GatewaySenderWrapper:
         shard_id: int,
         shard_count: int,
     ):
-        self.logger.debug(f"CLI -> SRV: Identify")
+        self.logger.debug("CLI -> SRV: Identify")
 
         body = {
             "op": GatewayOp.IDENTIFY,
@@ -253,10 +254,8 @@ async def _super_loop(
                 heartbeat_count=shared_state.heartbeat_number,
                 sequence=shared_state.sequence,
             )
-            try:
+            with contextlib.suppress(WouldBlock):
                 event_channel.send_nowait(evt)
-            except WouldBlock:
-                pass
 
             continue
 
@@ -330,12 +329,11 @@ async def _super_loop(
                 )
 
             evt = GatewayHello(
-                shard_id=shared_state.shard_id, heartbeat_interval=time_inbetween_heartbeats
+                shard_id=shared_state.shard_id,
+                heartbeat_interval=time_inbetween_heartbeats,
             )
-            try:
+            with contextlib.suppress(WouldBlock):
                 event_channel.send_nowait(evt)
-            except WouldBlock:
-                pass
 
         elif opcode == GatewayOp.RECONNECT:
             # Discord wants us to reconnect. Okay.
@@ -344,10 +342,8 @@ async def _super_loop(
             await ws.close(code=1001, reason="Gateway is reconnecting!")
 
             evt = GatewayReconnectRequested(shard_id=shared_state.shard_id)
-            try:
+            with contextlib.suppress(WouldBlock):
                 event_channel.send_nowait(evt)
-            except WouldBlock:
-                pass
 
             raise WebsocketClosedError(code=1001, reason="Gateway is reconnecting!")
 
@@ -361,13 +357,12 @@ async def _super_loop(
             shared_state.heartbeat_acks += 1
 
             evt = GatewayHeartbeatAck(
-                shard_id=shared_state.shard_id, heartbeat_ack_count=shared_state.heartbeat_acks
+                shard_id=shared_state.shard_id,
+                heartbeat_ack_count=shared_state.heartbeat_acks,
             )
 
-            try:
+            with contextlib.suppress(WouldBlock):
                 event_channel.send_nowait(evt)
-            except WouldBlock:
-                pass
 
         elif opcode == GatewayOp.HEARTBEAT:
             # Occasionally, Discord asks us for a heartbeat. I don't really know why, but they do.
@@ -382,10 +377,8 @@ async def _super_loop(
                 heartbeat_count=shared_state.heartbeat_number,
                 sequence=shared_state.sequence,
             )
-            try:
+            with contextlib.suppress(WouldBlock):
                 event_channel.send_nowait(evt)
-            except WouldBlock:
-                pass
 
         elif opcode == GatewayOp.DISPATCH:
             # Dispatches update the sequence data, which is needed for heartbeats.
@@ -443,10 +436,8 @@ async def _super_loop(
                 )
 
             evt = GatewayInvalidateSession(shard_id=shared_state.shard_id, resumable=raw_data)
-            try:
+            with contextlib.suppress(WouldBlock):
                 event_channel.send_nowait(evt)
-            except WouldBlock:
-                pass
 
         else:
             shared_state.logger.warning("Unknown event...")
@@ -483,7 +474,7 @@ async def run_gateway_loop(
     while True:
         parsed_url = furl(shared_state.reconnect_url)
         parsed_url.query.params = {"version": "10", "encoding": "json"}
-        shared_state.logger.info(f"Opening new WebSocket connection to {str(parsed_url)}")
+        shared_state.logger.info(f"Opening new WebSocket connection to {parsed_url!s}")
 
         async with (
             open_ws_connection(str(parsed_url)) as ws,
@@ -501,9 +492,9 @@ async def run_gateway_loop(
                     case 4004:
                         raise ValueError("Invalid token!") from e
                     case 4010 | 4011:
-                        raise RuntimeError("Resharding not yet impl'd")
+                        raise RuntimeError("Resharding not yet impl'd") from e
                     case 4013 | 4014:
-                        raise RuntimeError(PRIVILEGED_INTENTS_MESSAGE)
+                        raise RuntimeError(PRIVILEGED_INTENTS_MESSAGE) from e
                     case _:
                         shared_state.logger.warning(
                             f"Received unexpected close {e.code} ({e.reason}), reconnecting..."

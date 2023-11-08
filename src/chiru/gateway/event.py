@@ -1,11 +1,10 @@
-import abc
 from collections.abc import Mapping
 from typing import Any
 
 import attr
 
 
-class OutgoingGatewayEvent(abc.ABC):
+class OutgoingGatewayEvent:
     """
     Marker interface for outgoing events towards the Discord gateway.
     """
