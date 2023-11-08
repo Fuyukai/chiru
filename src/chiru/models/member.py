@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 import attr
 import cattr
 from arrow import Arrow
@@ -5,6 +8,9 @@ from cattr import Converter, override
 
 from chiru.models.base import DiscordObject, StatefulMixin
 from chiru.models.user import RawUser, User
+
+if TYPE_CHECKING:
+    from chiru.models.guild import Guild
 
 
 @attr.s(kw_only=True)
@@ -44,9 +50,26 @@ class RawMember:
 
 
 @attr.s(slots=True, kw_only=True)
-class Member(RawMember, StatefulMixin):
+class Member(DiscordObject, RawMember, StatefulMixin):
     """
     Stateful version of :class:`.RawMember`.
     """
 
+    #: The ID for this member. Backfilled automatically.
+    id: int = attr.ib(init=False)
+
     user: User | None = attr.ib(default=None)
+
+    #: The guild ID that this member is for.
+    guild_id: int = attr.ib(init=False)
+
+    @property
+    def guild(self) -> Guild:
+        """
+        Gets the :class:`.Guild` this member is from.
+        """
+
+        guild = self._client.object_cache.get_available_guild(self.guild_id)
+        assert guild, f"Somehow got a member for a non-existent guild {self.guild_id}"
+        return guild
+

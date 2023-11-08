@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import Iterator, Sequence
+from collections.abc import Iterator
 from functools import partial
-from typing import TYPE_CHECKING, Any, Mapping, Type, TypeVar, final
+from typing import TYPE_CHECKING, Any, Mapping, Type, TypeVar, cast, final
 
 import attr
 import cattr
@@ -10,11 +10,12 @@ from cattr import Converter, override
 
 from chiru.models.base import DiscordObject, StatefulMixin
 from chiru.models.channel import Channel, RawChannel
+from chiru.models.member import Member, RawMember
 
 if TYPE_CHECKING:
     from chiru.models.factory import StatefulObjectFactory
 
-DObjT = TypeVar("DObjT", bound=DiscordObject)
+DObjT = TypeVar("DObjT")
 
 
 @final
@@ -38,8 +39,14 @@ class GuildChannelList(Mapping[int, Channel]):
         Creates a new channel list from a ``GUILD_CREATE`` packet.
         """
 
-        channels = [factory.make_channel(c) for c in packet["channels"]]
-        channels = {c.id: c for c in channels}
+        guild_id = int(packet["id"])
+
+        channels: dict[int, Channel] = {}
+        for data in packet["channels"]:
+            created_channel = factory.make_channel(data)
+            created_channel.guild_id = guild_id
+            channels[created_channel.id] = created_channel
+
         return GuildChannelList(channels)
 
     def __getitem__(self, __key: int) -> Channel:
@@ -50,6 +57,46 @@ class GuildChannelList(Mapping[int, Channel]):
 
     def __len__(self) -> int:
         return len(self._channels)
+
+
+class GuildMemberList(Mapping[int, Member]):
+    """
+    A more stateful container for the members in a guild.
+    """
+
+    def __init__(self, members: dict[int, Member]) -> None:
+        super().__init__()
+
+        self._members = members
+
+    @classmethod
+    def from_guild_packet(
+        cls,
+        packet: Mapping[str, Any],
+        factory: StatefulObjectFactory,
+    ) -> GuildMemberList:
+        """
+        Creates a new member list from a ``GUILD_CREATE`` packet.
+        """
+
+        guild_id = int(packet["id"])
+
+        members: dict[int, Member] = {}
+        for data in packet["members"]:
+            created_member = factory.make_member(data)
+            created_member.guild_id = guild_id
+            members[created_member.id] = created_member
+
+        return GuildMemberList(members)
+    
+    def __getitem__(self, __key: int) -> Member:
+        return self._members[__key]
+    
+    def __iter__(self) -> Iterator[int]:
+        return iter(self._members)
+    
+    def __len__(self) -> int:
+        return len(self._members)
 
 
 @attr.s(slots=True, kw_only=True)
@@ -71,16 +118,23 @@ class RawGuild(DiscordObject):
     @staticmethod
     def unmap_to_id(
         converter: Converter,
-        type: Type[DObjT],
         data: Any,
-        _,
+        provided_type: Type[DObjT],
     ) -> Mapping[int, DObjT]:
-        items = [converter.structure(item, type) for item in data]
-        return {i.id: i for i in items}
+        items = [converter.structure(item, provided_type) for item in data]
+
+        # can't access the generic type in the function body, so just slap a type: ignore on it.
+        if provided_type is RawMember:
+            return {i.raw_author.id: i for i in items}  # type: ignore
+        
+        assert issubclass(provided_type, DiscordObject), f"expected DiscordObject, not {provided_type}"
+        return {i.id: i for i in items}  # type: ignore
+        
 
     @classmethod
     def configure_converter(cls, converter: Converter):
-        raw_channel_fn = override(struct_hook=partial(cls.unmap_to_id, converter, RawChannel))
+        raw_channel_fn = override(struct_hook=partial(cls.unmap_to_id, converter))
+        raw_member_fn = override(struct_hook=partial(cls.unmap_to_id, converter))
 
         converter.register_structure_hook(
             RawGuild,
@@ -88,6 +142,7 @@ class RawGuild(DiscordObject):
                 RawGuild,
                 converter,
                 channels=raw_channel_fn,
+                members=raw_member_fn,
                 _cattrs_forbid_extra_keys=False,
             ),
         )
@@ -126,3 +181,6 @@ class Guild(RawGuild, StatefulMixin):
 
     #: The list of stateful channels that this guild contains.
     channels: GuildChannelList = attr.ib(init=False)
+
+    #: The list of stateful members that this guild contains.
+    members: GuildMemberList = attr.ib(init=False)

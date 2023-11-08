@@ -7,7 +7,6 @@ import attr
 if TYPE_CHECKING:
     from chiru.models.channel import Channel
     from chiru.models.guild import Guild, UnavailableGuild
-    from chiru.models.user import User
 else:
     Guild = None
 

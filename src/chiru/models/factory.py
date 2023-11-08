@@ -4,7 +4,8 @@ from typing import TYPE_CHECKING, Any, Mapping
 
 from chiru.cache import ObjectCache
 from chiru.models.channel import Channel
-from chiru.models.guild import Guild, GuildChannelList, UnavailableGuild
+from chiru.models.guild import Guild, GuildChannelList, GuildMemberList, UnavailableGuild
+from chiru.models.member import Member
 from chiru.models.message import Message
 from chiru.models.user import User
 from chiru.serialise import CONVERTER, create_chiru_converter
@@ -35,6 +36,20 @@ class StatefulObjectFactory:
         obb = CONVERTER.structure(user_data, User)
         obb._chiru_set_client(self._client)
         return obb
+    
+    def make_member(
+        self, user_data: Mapping[str, Any]
+    ) -> Member:
+        """
+        Creates a new stateful :class:`.Member`.
+        """
+
+        obb = CONVERTER.structure(user_data, Member)
+        assert obb.user is not None, "stateful member objects must have user data attached"
+        obb.id = obb.user.id
+
+        obb._chiru_set_client(self._client)
+        return obb
 
     def make_message(self, message_data: Mapping[str, Any]) -> Message:
         """
@@ -45,9 +60,7 @@ class StatefulObjectFactory:
         obb._chiru_set_client(self._client)
 
         # fill child fields
-        obb.author._chiru_set_client(bot=self._client)
-        if obb.member:
-            obb.member._chiru_set_client(bot=self._client)
+        obb.raw_author._chiru_set_client(bot=self._client)
 
         return obb
 
@@ -74,5 +87,8 @@ class StatefulObjectFactory:
 
         channel_list = GuildChannelList.from_guild_packet(guild_data, self)
         base_guild.channels = channel_list
+        member_list = GuildMemberList.from_guild_packet(guild_data, self)
+        base_guild.members = member_list
+        
 
         return base_guild

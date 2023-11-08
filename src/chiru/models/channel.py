@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import enum
+from typing import TYPE_CHECKING
 
 import attr
 import cattr
@@ -8,6 +9,9 @@ from cattr import Converter
 
 from chiru.models.base import DiscordObject, StatefulMixin
 from chiru.models.message import Message
+
+if TYPE_CHECKING:
+    from chiru.models.guild import Guild
 
 
 class ChannelType(enum.Enum):
@@ -116,8 +120,21 @@ class Channel(RawChannel, StatefulMixin):
     The stateful version of :class:`.RawChannel`.
     """
 
+    #: The guild ID for this channel, if any.
+    guild_id: int | None = attr.ib(default=None)
+    
     messages: ChannelMessages = attr.ib(init=False)
 
     def __attrs_post_init__(self):
-        print("attrs post init")
         self.messages = ChannelMessages(self)
+
+    @property
+    def guild(self) -> Guild | None:
+        """
+        The :class:`.Guild` for this channel, if any.
+        """
+
+        if not self.guild_id:
+            return None
+
+        return self._client.object_cache.get_available_guild(self.guild_id)
