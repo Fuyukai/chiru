@@ -1,4 +1,8 @@
+from __future__ import annotations
+
 import enum
+from functools import cached_property
+from typing import TYPE_CHECKING
 
 import arrow
 import attr
@@ -8,6 +12,9 @@ from cattrs.gen import make_dict_structure_fn, override
 from chiru.models.base import DiscordObject, StatefulMixin
 from chiru.models.member import Member, RawMember
 from chiru.models.user import RawUser, User
+
+if TYPE_CHECKING:
+    from chiru.models.channel import Channel
 
 
 # If only Python enums didn't suck!
@@ -68,7 +75,7 @@ class MessageType(enum.Enum):
     GUILD_APPLICATION_PREMIUM_SUBSCRIPTION = 32
 
 
-@attr.s()
+@attr.s(kw_only=True)
 class RawMessage(DiscordObject):
     """
     A single message sent in a channel.
@@ -91,6 +98,9 @@ class RawMessage(DiscordObject):
     #: The Snowflake ID of the channel that this message was sent in.
     channel_id: int = attr.ib()
 
+    #: The Snowflake ID of the guild that this message was sent in, if any.
+    guild_id: int | None = attr.ib(default=None)
+
     #: The author :class:`.RawUser` for this message.
     author: RawUser = attr.ib()
 
@@ -107,10 +117,27 @@ class RawMessage(DiscordObject):
     member: RawMember | None = attr.ib(default=None)
 
 
-@attr.s(slots=True)
+@attr.s(slots=False)
 class Message(RawMessage, StatefulMixin):
     #: The author :class:`.User` for this message.
     author: User = attr.ib()
 
     #: The member data for this message. May be empty for non-Guild members or webhooks.
     member: Member | None = attr.ib(default=None)
+
+    @cached_property
+    def channel(self) -> Channel:
+        """
+        Gets the channel that this message is for.
+        """
+
+        if self.guild_id:
+            guild = self._client.object_cache.get_available_guild(self.guild_id)
+            if guild is not None:
+                return guild.channels[self.channel_id]
+        
+        if channel := self._client.object_cache.find_channel(self.channel_id):
+            return channel
+        
+        raise RuntimeError(f"Couldn't find channel {self.channel_id}")
+    

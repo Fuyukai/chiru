@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import enum
 
 import attr
@@ -5,6 +7,7 @@ import cattr
 from cattr import Converter
 
 from chiru.models.base import DiscordObject, StatefulMixin
+from chiru.models.message import Message
 
 
 class ChannelType(enum.Enum):
@@ -46,6 +49,31 @@ class ChannelType(enum.Enum):
     GUILD_MEDIA = 16
 
 
+class ChannelMessages:
+    """
+    A container for channel messages.
+    """
+
+    def __init__(self, channel: Channel) -> None:
+        self._channel = channel
+
+    async def send(
+        self, 
+        content: str | None = None,
+    ) -> Message:
+        """
+        Sends a single message to this channel.
+
+        :param content: The raw textual content for this message.
+        """
+
+        return await self._channel._client.http.send_message(
+            channel_id=self._channel.id,
+            content=content,
+            factory=self._channel._client.stateful_factory
+        )
+
+
 @attr.s(kw_only=True)
 class RawChannel(DiscordObject):
     """
@@ -82,8 +110,14 @@ class RawChannel(DiscordObject):
     #: If this channel is NSFW or not. Defaults to False.
     nsfw: bool = attr.ib(default=False)
 
-
+@attr.s()
 class Channel(RawChannel, StatefulMixin):
     """
     The stateful version of :class:`.RawChannel`.
     """
+
+    messages: ChannelMessages = attr.ib(init=False)
+
+    def __attrs_post_init__(self):
+        print("attrs post init")
+        self.messages = ChannelMessages(self)

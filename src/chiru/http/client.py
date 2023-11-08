@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from importlib.metadata import version
 from math import ceil
-from typing import Any, Mapping
+from typing import Any, Mapping, overload
 
 import anyio
 import attr
@@ -13,7 +13,8 @@ from httpx import AsyncClient, Response
 
 from chiru.http.ratelimit import RatelimitManager
 from chiru.http.response import GatewayResponse
-from chiru.models.message import RawMessage
+from chiru.models.factory import StatefulObjectFactory
+from chiru.models.message import Message, RawMessage
 from chiru.models.oauth import OAuthApplication
 from chiru.serialise import CONVERTER
 
@@ -196,11 +197,22 @@ class ChiruHttpClient(object):
     # TODO: Figure out some good way of representing allowed_mentions.
     # TODO: Embeds.
     # TODO: Interactions.
+    @overload
+    async def send_message(self, *, channel_id: int, content: str | None) -> RawMessage:
+        ...
+
+    @overload
+    async def send_message(
+        self, *, channel_id: int, content: str | None, factory: StatefulObjectFactory | None = None
+    ) -> Message:
+        ...
+
     async def send_message(
         self,
         *,
         channel_id: int,
         content: str | None = None,
+        factory: StatefulObjectFactory | None = None
     ) -> RawMessage:
         """
         Sends a single message to a channel.
@@ -215,5 +227,8 @@ class ChiruHttpClient(object):
             path=Endpoints.CHANNEL_MESSAGES.format(channel_id=channel_id),
             body_json={"content": content},
         )
+
+        if factory:
+            return factory.make_message(resp.json())
 
         return CONVERTER.structure(resp.json(), RawMessage)
