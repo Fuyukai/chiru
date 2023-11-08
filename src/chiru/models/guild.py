@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from functools import partial
-from typing import TYPE_CHECKING, Any, Mapping, Type, TypeVar, cast, final
+from typing import TYPE_CHECKING, Any, Mapping, Type, TypeVar, final
 
 import attr
 import cattr
@@ -88,13 +88,13 @@ class GuildMemberList(Mapping[int, Member]):
             members[created_member.id] = created_member
 
         return GuildMemberList(members)
-    
+
     def __getitem__(self, __key: int) -> Member:
         return self._members[__key]
-    
+
     def __iter__(self) -> Iterator[int]:
         return iter(self._members)
-    
+
     def __len__(self) -> int:
         return len(self._members)
 
@@ -126,10 +126,11 @@ class RawGuild(DiscordObject):
         # can't access the generic type in the function body, so just slap a type: ignore on it.
         if provided_type is RawMember:
             return {i.raw_author.id: i for i in items}  # type: ignore
-        
-        assert issubclass(provided_type, DiscordObject), f"expected DiscordObject, not {provided_type}"
+
+        assert issubclass(
+            provided_type, DiscordObject
+        ), f"expected DiscordObject, not {provided_type}"
         return {i.id: i for i in items}  # type: ignore
-        
 
     @classmethod
     def configure_converter(cls, converter: Converter):

@@ -62,7 +62,7 @@ class ChannelMessages:
         self._channel = channel
 
     async def send(
-        self, 
+        self,
         content: str | None = None,
     ) -> Message:
         """
@@ -74,7 +74,7 @@ class ChannelMessages:
         return await self._channel._client.http.send_message(
             channel_id=self._channel.id,
             content=content,
-            factory=self._channel._client.stateful_factory
+            factory=self._channel._client.stateful_factory,
         )
 
 
@@ -114,6 +114,7 @@ class RawChannel(DiscordObject):
     #: If this channel is NSFW or not. Defaults to False.
     nsfw: bool = attr.ib(default=False)
 
+
 @attr.s()
 class Channel(RawChannel, StatefulMixin):
     """
@@ -122,7 +123,7 @@ class Channel(RawChannel, StatefulMixin):
 
     #: The guild ID for this channel, if any.
     guild_id: int | None = attr.ib(default=None)
-    
+
     messages: ChannelMessages = attr.ib(init=False)
 
     def __attrs_post_init__(self):

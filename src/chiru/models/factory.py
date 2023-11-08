@@ -4,7 +4,12 @@ from typing import TYPE_CHECKING, Any, Mapping
 
 from chiru.cache import ObjectCache
 from chiru.models.channel import Channel
-from chiru.models.guild import Guild, GuildChannelList, GuildMemberList, UnavailableGuild
+from chiru.models.guild import (
+    Guild,
+    GuildChannelList,
+    GuildMemberList,
+    UnavailableGuild,
+)
 from chiru.models.member import Member
 from chiru.models.message import Message
 from chiru.models.user import User
@@ -36,10 +41,8 @@ class StatefulObjectFactory:
         obb = CONVERTER.structure(user_data, User)
         obb._chiru_set_client(self._client)
         return obb
-    
-    def make_member(
-        self, user_data: Mapping[str, Any]
-    ) -> Member:
+
+    def make_member(self, user_data: Mapping[str, Any]) -> Member:
         """
         Creates a new stateful :class:`.Member`.
         """
@@ -89,6 +92,5 @@ class StatefulObjectFactory:
         base_guild.channels = channel_list
         member_list = GuildMemberList.from_guild_packet(guild_data, self)
         base_guild.members = member_list
-        
 
         return base_guild

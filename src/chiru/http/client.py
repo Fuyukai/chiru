@@ -198,21 +198,19 @@ class ChiruHttpClient(object):
     # TODO: Embeds.
     # TODO: Interactions.
     @overload
-    async def send_message(self, *, channel_id: int, content: str | None) -> RawMessage:
-        ...
+    async def send_message(self, *, channel_id: int, content: str | None) -> RawMessage: ...
 
     @overload
     async def send_message(
         self, *, channel_id: int, content: str | None, factory: StatefulObjectFactory | None = None
-    ) -> Message:
-        ...
+    ) -> Message: ...
 
     async def send_message(
         self,
         *,
         channel_id: int,
         content: str | None = None,
-        factory: StatefulObjectFactory | None = None
+        factory: StatefulObjectFactory | None = None,
     ) -> RawMessage:
         """
         Sends a single message to a channel.

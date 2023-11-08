@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+
 import attr
 import cattr
 from arrow import Arrow
@@ -72,4 +73,3 @@ class Member(DiscordObject, RawMember, StatefulMixin):
         guild = self._client.object_cache.get_available_guild(self.guild_id)
         assert guild, f"Somehow got a member for a non-existent guild {self.guild_id}"
         return guild
-

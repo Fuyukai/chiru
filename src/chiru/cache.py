@@ -43,7 +43,7 @@ class ObjectCache:
         except KeyError:
             pass
 
-        for (id, guild) in self.guilds.items():
+        for id, guild in self.guilds.items():
             if guild.unavailable:
                 continue
 
@@ -52,5 +52,5 @@ class ObjectCache:
                 return guild.channels[channel_id]
             except KeyError:
                 continue
-        
+
         return None
