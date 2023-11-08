@@ -40,7 +40,7 @@ class StatefulMixin:
 
     Compared to raw models, stateful models can perform actions on the client directly via their
     own instance methods. Raw models only provide IDs of other models that the objects depend on,
-    whereas stateful models can directly look up
+    whereas stateful models can directly look up other objects from the object cache.
     """
 
     _client: ChiruBot = attr.ib(init=False)
