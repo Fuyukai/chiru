@@ -93,6 +93,9 @@ class GatewaySharedState:
     #: a zombie connection, and will be forcibly reconnected.
     heartbeat_acks: int = attr.ib(default=0)
 
+    #: The buffered message we were trying to send over the websocket between closures.
+    buffered_send_message: Any | None = attr.ib(default=None)
+
     logger: logging.Logger = attr.ib(init=False)
 
     def __attrs_post_init__(self):
@@ -174,6 +177,7 @@ async def _gw_receive_pump(ws: WebsocketClient, channel: MemoryObjectSendStream)
 
 
 async def _gw_send_pump(
+    shared_state: GatewaySharedState,
     external_chan: MemoryObjectReceiveStream[OutgoingGatewayEvent],
     loop_chan: MemoryObjectSendStream,
 ):
@@ -183,8 +187,11 @@ async def _gw_send_pump(
     """
 
     while True:
-        incoming_message = await external_chan.receive()
-        await loop_chan.send(incoming_message)
+        if shared_state.buffered_send_message is not None:
+            shared_state.buffered_send_message = await external_chan.receive()
+
+        await loop_chan.send(shared_state.buffered_send_message)
+        shared_state.buffered_send_message = None
 
 
 async def _super_loop(
@@ -483,7 +490,7 @@ async def run_gateway_loop(
             write, read = anyio.create_memory_object_stream[Any]()
 
             nursery.start_soon(partial(_gw_receive_pump, ws, write))
-            nursery.start_soon(partial(_gw_send_pump, outbound_channel, write))
+            nursery.start_soon(partial(_gw_send_pump, shared_state, outbound_channel, write))
 
             try:
                 await _super_loop(shared_state, ws, read, inbound_channel)
