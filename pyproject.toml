@@ -22,9 +22,10 @@ line-length = 100
 target-version = ["py311"]
 
 [tool.ruff]
+target-version = "py311"
+respect-gitignore = true
 src = ["src/chiru"]
 line-length = 100
-
 
 select = [
   "RUF", 
@@ -40,6 +41,10 @@ select = [
   "PYI", 
   "SIM", 
   "RET",
+]
+ignore = [
+    "W291",  # SHUT THE FUCK UP WHEN I'M TYPING COMMENTS
+    "W293",
 ]
 
 [tool.ruff.isort]

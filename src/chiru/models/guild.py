@@ -169,6 +169,15 @@ class RawGuild(DiscordObject):
     #: The mapping of channels that this guild contains.
     channels: Mapping[int, RawChannel] = attr.ib(factory=dict)
 
+    #: The mapping of members that this guild contains.
+    members: Mapping[int, RawMember] = attr.ib(factory=dict)
+
+    #: If this guild is a large guild, i.e. needs member chunking. Always False on the HTTP API.
+    large: bool = attr.ib(default=False)
+
+    #: The number of members in this guild. Always zero on the HTTP API.
+    member_count: int = attr.ib(default=0)
+
 
 @attr.s(slots=True, kw_only=True)
 class Guild(RawGuild, StatefulMixin):

@@ -1,14 +1,15 @@
 import logging
 from collections import defaultdict
+from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from functools import partial
-from typing import Any, AsyncGenerator, Awaitable, Callable, Type, TypeVar, overload
+from typing import Any, TypeVar, overload
 
 import attr
 import bitarray
 
 from chiru.bot import ChiruBot
-from chiru.event.model import DispatchedEvent
+from chiru.event.model import DispatchedEvent, Ready, ShardReady
 from chiru.event.parser import CachedEventParser
 from chiru.gateway.event import GatewayDispatch, IncomingGatewayEvent
 from chiru.util import CapacityLimitedNursery, open_limiting_nursery
@@ -55,10 +56,9 @@ class StatefulEventDispatcher:
         # no point type hinting this, too annoying.
         self._events = defaultdict(list)
 
-        # use a string here bc the default is "uninitialised" (wtf could that mean?)
+        # global ready state checking.
+        # bit array of the shards that have fired a ShardReady or not.
         self._ready_shards = bitarray.bitarray("0" * bot.cached_gateway_info.shards)
-
-        self._has_fired_all_ready = False
 
     @staticmethod
     async def _run_safely(fn: Callable[[], Awaitable[None]]):
@@ -69,7 +69,7 @@ class StatefulEventDispatcher:
 
     async def _dispatch_event(
         self,
-        event_klass: Type[Any],
+        event_klass: type[Any],
         ctx: EventContext | None,
         event: Any,
     ):
@@ -97,13 +97,13 @@ class StatefulEventDispatcher:
 
     @overload
     def add_event_handler(
-        self, event: Type[GwEventT], handler: Callable[[GwEventT], Awaitable[None]]
+        self, event: type[GwEventT], handler: Callable[[GwEventT], Awaitable[None]]
     ) -> None: ...
 
     @overload
     def add_event_handler(
         self,
-        event: Type[DsEventT],
+        event: type[DsEventT],
         handler: Callable[[EventContext, DsEventT], Awaitable[None]],
     ) -> None: ...
 
@@ -136,14 +136,13 @@ class StatefulEventDispatcher:
                 )
 
                 for dispatched in self._parser.get_parsed_events(client.stateful_factory, event):
+                    if isinstance(dispatched, ShardReady):
+                        self._ready_shards[event.shard_id] = True
+
+                        if self._ready_shards.all():
+                            await self._dispatch_event(Ready, context, Ready())
+
                     await self._dispatch_event(type(dispatched), context, dispatched)
-
-                if not self._has_fired_all_ready and event.event_name == "READY":
-                    self._ready_shards[event.shard_id] = True
-
-                    if self._ready_shards.all():
-                        self._has_fired_all_ready = True
-                        # await self._dispatch_event()
 
 
 @asynccontextmanager

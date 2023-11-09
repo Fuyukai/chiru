@@ -20,6 +20,20 @@ class Connected(DispatchedEvent):
 
 
 @final
+class ShardReady(DispatchedEvent):
+    """
+    Published when a single shard has streamed all guilds.
+    """
+
+
+@final
+class Ready(DispatchedEvent):
+    """
+    Published when all shards are ready.
+    """
+
+
+@final
 @attr.s(slots=True, frozen=True)
 class GuildStreamed(DispatchedEvent):
     """
