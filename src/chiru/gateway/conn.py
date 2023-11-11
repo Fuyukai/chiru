@@ -235,7 +235,7 @@ async def _super_loop(
     # 45_000 is a reasonable default value. It's what Discord has used for... a very long time.
     time_inbetween_heartbeats = 41.250
     # We use the absolute time with deadlines to ensure we don't lag on our heartbeats.
-    next_heartbeat_time = anyio.current_time() + time_inbetween_heartbeats
+    next_heartbeat_time: float = anyio.current_time() + time_inbetween_heartbeats
 
     # We use this to track if we've received a Hello before needing to send our first heartbeat.
     has_received_hello = False
@@ -338,7 +338,7 @@ async def _super_loop(
             # log in to the remote connection.
             has_received_hello = True
 
-            time_inbetween_heartbeats: float = raw_data["heartbeat_interval"] / 1000.0
+            time_inbetween_heartbeats = raw_data["heartbeat_interval"] / 1000.0
             shared_state.logger.debug("SRV -> CLI: Hello")
 
             shared_state.logger.info(f"Heartbeating every {time_inbetween_heartbeats} seconds...")

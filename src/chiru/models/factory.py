@@ -20,7 +20,6 @@ if TYPE_CHECKING:
     from chiru.bot import ChiruBot
 
 
-# noinspection PyProtectedMember
 class StatefulObjectFactory:
     """
     Produces stateful objects from raw JSON bodies.

@@ -84,8 +84,8 @@ class CachedEventParser:
             yield ShardReady()
 
         else:
-            guilds = {g.id: g for g in guilds}
-            self._cache.guilds = {**guilds, **self._cache.guilds}
+            mapped_guilds = {g.id: g for g in guilds}
+            self._cache.guilds = {**mapped_guilds, **self._cache.guilds}
 
             if not shard_state.is_ready:
                 shard_state.guilds_remaining = len(guilds)

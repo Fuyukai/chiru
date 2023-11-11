@@ -67,7 +67,7 @@ class ChiruHttpClient:
         :param endpoints: The namespace of API endpoints to use for routes.
         """
 
-        self.endpoints = endpoints or Endpoints()
+        self.endpoints: Endpoints = endpoints or Endpoints()
         self._http = httpx_client
 
         package_version = version("chiru")

@@ -65,7 +65,7 @@ class StatefulEventDispatcher:
         )
 
         # no point type hinting this, too annoying.
-        self._events = defaultdict(list)
+        self._events = defaultdict(list)  # type: ignore
 
         self._nursery = nursery
 
@@ -120,7 +120,11 @@ class StatefulEventDispatcher:
         handler: Callable[[EventContext, DsEventT], Awaitable[None]],
     ) -> None: ...
 
-    def add_event_handler(self, event, handler):
+    def add_event_handler(
+        self, 
+        event: type[GwEventT] | type[DsEventT], 
+        handler: Callable[[GwEventT], Awaitable[None]] | Callable[[EventContext, DsEventT], Awaitable[None]]
+    ) -> None:
         """
         Adds an event handler for a low-level gateway event.
         """
