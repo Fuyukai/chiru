@@ -229,3 +229,5 @@ cython_debug/
 #.idea/
 
 aaa.py
+docs/build
+docs/source/_build
