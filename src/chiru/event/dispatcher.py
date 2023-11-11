@@ -121,9 +121,10 @@ class StatefulEventDispatcher:
     ) -> None: ...
 
     def add_event_handler(
-        self, 
-        event: type[GwEventT] | type[DsEventT], 
-        handler: Callable[[GwEventT], Awaitable[None]] | Callable[[EventContext, DsEventT], Awaitable[None]]
+        self,
+        event: type[GwEventT] | type[DsEventT],
+        handler: Callable[[GwEventT], Awaitable[None]]
+        | Callable[[EventContext, DsEventT], Awaitable[None]],
     ) -> None:
         """
         Adds an event handler for a low-level gateway event.

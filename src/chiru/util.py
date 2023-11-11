@@ -2,12 +2,11 @@ from __future__ import annotations
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncContextManager, TypeVar
+from typing import TypeVar
 
 import anyio
 from anyio import CancelScope, CapacityLimiter
 from anyio.abc import TaskGroup
-from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
 
 ItemT = TypeVar("ItemT")
 
@@ -42,19 +41,18 @@ class CapacityLimitedNursery:
         return self._nursery.cancel_scope
 
 
-def open_limiting_nursery(max_tasks: int = 16) -> AsyncContextManager[CapacityLimitedNursery]:
+@asynccontextmanager
+async def open_limiting_nursery(
+    max_tasks: int = 16
+) -> AsyncGenerator[CapacityLimitedNursery, None]:
     """
     Opens a capacity limiting nursery.
 
     :param max_tasks: The maximum number of tasks that can run simultaneously.
     """
 
-    @asynccontextmanager
-    async def _do():
-        async with anyio.create_task_group() as n:
-            yield CapacityLimitedNursery(n, CapacityLimiter(max_tasks))
-
-    return _do()
+    async with anyio.create_task_group() as n:
+        yield CapacityLimitedNursery(n, CapacityLimiter(max_tasks))
 
 
 @asynccontextmanager

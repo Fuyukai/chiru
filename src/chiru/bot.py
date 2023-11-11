@@ -24,7 +24,7 @@ class ChiruBot:
         app: OAuthApplication,
         gw: GatewayResponse,
         token: str,
-    ):
+    ) -> None:
         #: The HTTP client that is used for making HTTP requests. This is pre-configured with
         #: authentication and ratelimit support, and can be used directly to access endpoints that
         #: are not otherwise exposed.

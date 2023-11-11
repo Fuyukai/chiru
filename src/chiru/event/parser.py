@@ -132,7 +132,9 @@ class CachedEventParser:
 
         self._chunker.handle_joined_guild(event.shard_id, created_guild)
 
-    def parse_guild_members_chunk(self, event: GatewayDispatch, factory: StatefulObjectFactory):
+    def parse_guild_members_chunk(
+        self, event: GatewayDispatch, factory: StatefulObjectFactory
+    ) -> Iterable[DispatchedEvent]:
         """
         Parses a single incoming member chunk.
         """
@@ -164,7 +166,9 @@ class CachedEventParser:
         yield evt
 
     @staticmethod
-    def parse_message_create(event: GatewayDispatch, factory: StatefulObjectFactory):
+    def parse_message_create(
+        event: GatewayDispatch, factory: StatefulObjectFactory
+    ) -> Iterable[DispatchedEvent]:
         """
         Parses a MESSAGE_CREATE event.
         """

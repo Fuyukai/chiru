@@ -11,7 +11,7 @@ import attr
 from anyio import WouldBlock
 from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
 from furl import furl
-from stickney import WebsocketClient, WebsocketClosedError, open_ws_connection
+from stickney import WebsocketClient, WebsocketClosedError, WsMessage, open_ws_connection
 from stickney.frame import BinaryMessage, CloseMessage, TextualMessage
 
 from chiru.gateway.event import (
@@ -165,7 +165,7 @@ class GatewaySenderWrapper:
     async def send_chunk_request(self, payload: GatewayMemberChunkRequest):
         self.logger.debug(f"CLI -> SRV: Member Chunk Request ({payload.guild_id})")
 
-        body = {
+        body: dict[str, Any] = {
             "op": GatewayOp.REQUEST_MEMBERS,
             "d": {
                 "guild_id": str(payload.guild_id),
@@ -187,7 +187,9 @@ class GatewaySenderWrapper:
         return await self._ws.send_message(json.dumps(body))
 
 
-async def _gw_receive_pump(ws: WebsocketClient, channel: MemoryObjectSendStream):
+async def _gw_receive_pump(
+    ws: WebsocketClient, channel: MemoryObjectSendStream[OutgoingGatewayEvent | WsMessage]
+):
     """
     The Gateway receive pumper. Takes incoming messages from the Gateway and passes them along
     to our internal channel.
@@ -204,7 +206,7 @@ async def _gw_receive_pump(ws: WebsocketClient, channel: MemoryObjectSendStream)
 async def _gw_send_pump(
     shared_state: GatewaySharedState,
     external_chan: MemoryObjectReceiveStream[OutgoingGatewayEvent],
-    loop_chan: MemoryObjectSendStream,
+    loop_chan: MemoryObjectSendStream[OutgoingGatewayEvent | WsMessage],
 ):
     """
     The Gateway send pumper. Takes incoming messages from the bot and passes them along to our
@@ -222,7 +224,7 @@ async def _gw_send_pump(
 async def _super_loop(
     shared_state: GatewaySharedState,
     ws: WebsocketClient,
-    central_channel: MemoryObjectReceiveStream,
+    central_channel: MemoryObjectReceiveStream[OutgoingGatewayEvent | WsMessage],
     event_channel: MemoryObjectSendStream[IncomingGatewayEvent],
 ):
     """

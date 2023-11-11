@@ -51,7 +51,7 @@ class RawUser(DiscordObject):
 
         return self.username
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.id)
 
     def __eq__(self, other):

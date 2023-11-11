@@ -39,7 +39,7 @@ class StatefulObjectFactory:
         """
 
         obb = CONVERTER.structure(user_data, User)
-        obb._chiru_set_client(self._client)
+        obb._chiru_set_client(self._client)  # type: ignore
         return obb
 
     def make_member(self, user_data: Mapping[str, Any]) -> Member:

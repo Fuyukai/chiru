@@ -1,8 +1,8 @@
 import logging
 from collections.abc import AsyncIterator
 from functools import partial
-import anyio
 
+import anyio
 import attr
 from anyio import CancelScope
 from anyio.abc import TaskGroup
@@ -43,7 +43,9 @@ class GatewayCollection:
         self._initial_url = initial_url
         self._shard_count = shard_count
 
-        self._event_write, self._event_read = anyio.create_memory_object_stream[IncomingGatewayEvent]()
+        self._event_write, self._event_read = anyio.create_memory_object_stream[
+            IncomingGatewayEvent
+        ]()
 
     def __aiter__(self) -> AsyncIterator[IncomingGatewayEvent]:
         return aiter(self._event_read)  # type: ignore
@@ -54,7 +56,9 @@ class GatewayCollection:
         shard_id: int,
     ):
         with CancelScope() as scope, self._event_write.clone() as event_channel:
-            outbound_write, outbound_read = anyio.create_memory_object_stream[OutgoingGatewayEvent]()
+            outbound_write, outbound_read = anyio.create_memory_object_stream[
+                OutgoingGatewayEvent
+            ]()
             wrapped = GatewayWrapper(outbound_write, scope)
             self._gateway_ctl_channels[shard_id] = wrapped
 

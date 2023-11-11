@@ -80,9 +80,7 @@ class GuildChunker:
         # the parser is responsible for actually loading all of the members...
         # this mostly just tracks guilds that are fully chunked
 
-        logger.debug(
-            f"Received chunk {evt.chunk_index + 1} / {evt.chunk_count} for {evt.guild.id}"
-        )
+        logger.debug(f"Received chunk {evt.chunk_index + 1} / {evt.chunk_count} for {evt.guild.id}")
 
         if evt.chunk_index + 1 >= evt.chunk_count:
             logger.debug(f"Guild {evt.guild.id} is fully chunked!")
@@ -107,7 +105,7 @@ class GuildChunker:
             logger.debug(f"Guild {guild.id} is not large, skipping chunk request")
             self._guild_fully_chunked[guild.id].set()
             return
-        
+
         logger.debug(f"Guild {guild.id} is large, sending a member chunk request")
 
         evt = GatewayMemberChunkRequest(guild_id=guild.id, query="", limit=0, presences=False)

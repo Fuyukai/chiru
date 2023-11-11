@@ -24,7 +24,7 @@ class RatelimitManager:
 
         rl = self._ratelimits.pop(bucket, None)
 
-        # make sure no tasks
+        # make sure no tasks are still alive
         if rl:
             for scope in rl._scopes:
                 scope.cancel()

@@ -41,7 +41,7 @@ class Endpoints:
     CHANNEL = API_BASE + "/channels/{channel_id}"
     CHANNEL_MESSAGES = CHANNEL + "/messages"
 
-    def __init__(self, base_url: str = "https://discord.com"):
+    def __init__(self, base_url: str = "https://discord.com") -> None:
         self.base_url = base_url
 
 
@@ -206,7 +206,7 @@ class ChiruHttpClient:
         *,
         channel_id: int,
         content: str | None,
-        factory: StatefulObjectFactory | None = None,
+        factory: StatefulObjectFactory,
     ) -> Message: ...
 
     async def send_message(
@@ -215,7 +215,7 @@ class ChiruHttpClient:
         channel_id: int,
         content: str | None = None,
         factory: StatefulObjectFactory | None = None,
-    ) -> RawMessage:
+    ) -> RawMessage | Message:
         """
         Sends a single message to a channel.
 
