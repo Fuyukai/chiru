@@ -1,5 +1,5 @@
-from contextlib import asynccontextmanager
-from typing import AsyncContextManager
+from collections.abc import AsyncGenerator
+from contextlib import AbstractAsyncContextManager, asynccontextmanager
 
 import anyio
 import httpx
@@ -50,37 +50,34 @@ class ChiruBot:
 
         return self.stateful_factory.object_cache
 
-    def start_receiving_events(
+    @asynccontextmanager
+    async def start_receiving_events(
         self,
-    ) -> AsyncContextManager[GatewayCollection]:
+    ) -> AsyncGenerator[GatewayCollection, None]:
         """
         Starts receiving inbound events from the gateway on all available shards.
         """
 
-        @asynccontextmanager
-        async def _do():
-            async with anyio.create_task_group() as nursery:
-                wrapper = GatewayCollection(
-                    nursery,
-                    self.__token,
-                    self.cached_gateway_info.url,
-                    self.cached_gateway_info.shards,
-                )
+        async with anyio.create_task_group() as nursery:
+            wrapper = GatewayCollection(
+                nursery,
+                self.__token,
+                self.cached_gateway_info.url,
+                self.cached_gateway_info.shards,
+            )
 
-                for shard in range(0, self.cached_gateway_info.shards):
-                    wrapper._start_shard(shard)
+            for shard in range(0, self.cached_gateway_info.shards):
+                wrapper._start_shard(shard)
 
-                try:
-                    yield wrapper
-                finally:
-                    nursery.cancel_scope.cancel()
-
-        return _do()
+            try:
+                yield wrapper
+            finally:
+                nursery.cancel_scope.cancel()
 
 
 def open_bot(
     token: str,
-) -> AsyncContextManager[ChiruBot]:
+) -> AbstractAsyncContextManager[ChiruBot]:
     """
     Opens a new :class:`.ChiruBot` instance. This is an async context manager function.
 

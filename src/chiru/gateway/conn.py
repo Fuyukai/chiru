@@ -20,6 +20,7 @@ from chiru.gateway.event import (
     GatewayHeartbeatSent,
     GatewayHello,
     GatewayInvalidateSession,
+    GatewayMemberChunkRequest,
     GatewayReconnectRequested,
     IncomingGatewayEvent,
     OutgoingGatewayEvent,
@@ -161,6 +162,30 @@ class GatewaySenderWrapper:
 
         return await self._ws.send_message(json.dumps(body))
 
+    async def send_chunk_request(self, payload: GatewayMemberChunkRequest):
+        self.logger.debug(f"CLI -> SRV: Member Chunk Request ({payload.guild_id})")
+
+        body = {
+            "op": GatewayOp.REQUEST_MEMBERS,
+            "d": {
+                "guild_id": str(payload.guild_id),
+                "presences": payload.presences,
+            },
+        }
+
+        if payload.user_ids:
+            body["d"]["user_ids"] = payload.user_ids
+        else:
+            body["d"]["query"] = payload.query
+
+        if payload.limit is not None:
+            body["d"]["limit"] = payload.limit
+
+        if payload.nonce is not None:
+            body["d"]["nonce"] = payload.nonce
+
+        return await self._ws.send_message(json.dumps(body))
+
 
 async def _gw_receive_pump(ws: WebsocketClient, channel: MemoryObjectSendStream):
     """
@@ -187,7 +212,7 @@ async def _gw_send_pump(
     """
 
     while True:
-        if shared_state.buffered_send_message is not None:
+        if shared_state.buffered_send_message is None:
             shared_state.buffered_send_message = await external_chan.receive()
 
         await loop_chan.send(shared_state.buffered_send_message)
@@ -269,9 +294,8 @@ async def _super_loop(
         # All incoming messages are WsMessages, all outgoing messages are not WsMessage.
         # Outgoing messages include presence updates, external closure requests (usually for
         # debugging), or guild member chunking.
-        if isinstance(next_message, OutgoingGatewayEvent):
-            # TODO!
-            continue
+        if isinstance(next_message, GatewayMemberChunkRequest):
+            await wrapped.send_chunk_request(next_message)
 
         # Incoming messages are either regular textual messages which contain a JSON body, or
         # binary-encoded messages that may contain either Erlang Term Format, or compressed data.

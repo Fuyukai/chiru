@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from functools import partial
-from typing import TYPE_CHECKING, Any, Mapping, TypeVar, final
+from typing import TYPE_CHECKING, Any, TypeVar, final
 
 import attr
 import cattr
@@ -65,8 +65,6 @@ class GuildMemberList(Mapping[int, Member]):
     """
 
     def __init__(self, members: dict[int, Member]) -> None:
-        super().__init__()
-
         self._members = members
 
     @classmethod

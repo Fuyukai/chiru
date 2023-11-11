@@ -18,7 +18,6 @@ class ObjectCache:
     """
 
     guilds: dict[int, UnavailableGuild | Guild] = attr.ib(factory=dict)
-
     dm_channels: dict[int, Channel] = attr.ib(factory=dict)
 
     def get_available_guild(self, guild_id: int) -> Guild | None:

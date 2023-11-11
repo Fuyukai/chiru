@@ -1,6 +1,6 @@
 import logging
+from collections.abc import AsyncIterator
 from functools import partial
-from typing import AsyncIterator
 
 import attr
 from anyio import CancelScope
@@ -8,7 +8,10 @@ from anyio.abc import TaskGroup
 from anyio.streams.memory import MemoryObjectSendStream
 
 from chiru.gateway.conn import run_gateway_loop
-from chiru.gateway.event import IncomingGatewayEvent, OutgoingGatewayEvent
+from chiru.gateway.event import (
+    IncomingGatewayEvent,
+    OutgoingGatewayEvent,
+)
 from chiru.util import open_channel_pair
 
 logger = logging.getLogger(__name__)
@@ -72,6 +75,21 @@ class GatewayCollection:
 
     def _start_shard(self, shard_id: int):
         self._nursery.start_soon(partial(self._run_gateway_loop, shard_id=shard_id))
+
+    async def send_to_shard(
+        self,
+        shard_id: int,
+        message: OutgoingGatewayEvent,
+    ):
+        """
+        Sends a single outgoing gateway message.
+        """
+
+        shard = self._gateway_ctl_channels[shard_id]
+        if shard is None:
+            raise IndexError(f"Invalid shard {shard_id}")
+
+        await shard.write_channel.send(message)
 
     async def drain_forever(self):
         """

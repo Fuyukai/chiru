@@ -1,16 +1,32 @@
+import logging
+from collections.abc import Iterable
+
+import attr
+
 from chiru.cache import ObjectCache
+from chiru.event.chunker import GuildChunker
 from chiru.event.model import (
     Connected,
     DispatchedEvent,
     GuildAvailable,
     GuildJoined,
+    GuildMemberChunk,
     GuildStreamed,
+    InvalidGuildChunk,
     MessageCreate,
     ShardReady,
 )
 from chiru.gateway.event import GatewayDispatch
 from chiru.models.factory import StatefulObjectFactory
 from chiru.models.guild import UnavailableGuild
+
+logger = logging.getLogger(__name__)
+
+
+@attr.s(slots=True)
+class PerShardState:
+    is_ready: bool = attr.ib(default=False)
+    guilds_remaining: int = attr.ib(default=0)
 
 
 class CachedEventParser:
@@ -22,11 +38,18 @@ class CachedEventParser:
     Each parsing function here is a generator that may yield any number of events, including zero.
     """
 
-    def __init__(self, cache: ObjectCache):
+    def __init__(
+        self,
+        cache: ObjectCache,
+        shard_count: int,
+        chunker: GuildChunker,
+    ):
         self._cache = cache
 
-        self._remaining_guilds = 0
-        self._has_fired_startup_before = False
+        self._chunker = chunker
+
+        #: A list of per-shard shared mutable state.
+        self.per_shard_state = [PerShardState()] * shard_count
 
     def get_parsed_events(
         self, factory: StatefulObjectFactory, event: GatewayDispatch
@@ -45,20 +68,33 @@ class CachedEventParser:
         self,
         event: GatewayDispatch,
         factory: StatefulObjectFactory,
-    ):
+    ) -> Iterable[DispatchedEvent]:
         """
         Parses the READY event, which signals that a connection is open.
         """
 
         guilds = [factory.make_guild(g) for g in event.body["guilds"]]
-        self._cache.guilds = {g.id: g for g in guilds}
+        shard_state = self.per_shard_state[event.shard_id]
+        if len(guilds) <= 0:
+            # if there's no guilds for this shard (what?), make sure that the bot doesn't get stuck
+            # waiting for guild streams forever.
+            shard_state.is_ready = True
 
-        if not self._has_fired_startup_before:
-            self._remaining_guilds = len(self._cache.guilds)
+            yield Connected()
+            yield ShardReady()
 
-        yield Connected()
+        else:
+            guilds = {g.id: g for g in guilds}
+            self._cache.guilds = {**guilds, **self._cache.guilds}
 
-    def parse_guild_create(self, event: GatewayDispatch, factory: StatefulObjectFactory):
+            if not shard_state.is_ready:
+                shard_state.guilds_remaining = len(guilds)
+
+            yield Connected()
+
+    def parse_guild_create(
+        self, event: GatewayDispatch, factory: StatefulObjectFactory
+    ) -> Iterable[DispatchedEvent]:
         """
         Parses a GUILD_CREATE event, either from guild streaming or from joining a new guild.
         """
@@ -81,16 +117,51 @@ class CachedEventParser:
         if not guild_existed:
             yield GuildJoined(created_guild)
         else:
-            if not self._has_fired_startup_before:
-                yield GuildStreamed(created_guild)
-                self._remaining_guilds -= 1
+            per_shard_state = self.per_shard_state[event.shard_id]
 
-                if self._remaining_guilds <= 0:
-                    self._has_fired_startup_before = True
+            if not per_shard_state.is_ready:
+                yield GuildStreamed(created_guild)
+                per_shard_state.guilds_remaining -= 1
+
+                if per_shard_state.guilds_remaining <= 0:
+                    per_shard_state.is_ready = True
                     yield ShardReady()
 
             else:
                 yield GuildAvailable(created_guild)
+
+        self._chunker.handle_joined_guild(event.shard_id, created_guild)
+
+    def parse_guild_members_chunk(self, event: GatewayDispatch, factory: StatefulObjectFactory):
+        """
+        Parses a single incoming member chunk.
+        """
+
+        guild_id = int(event.body["guild_id"])
+
+        if event.body.get("not_found"):
+            yield InvalidGuildChunk(guild_id=guild_id)
+            return
+
+        guild = factory.object_cache.get_available_guild(guild_id)
+        if guild is None:
+            logger.warning(f"Was sent member chunk for invalid guild {guild_id}, ignoring?")
+            return
+
+        members = [factory.make_member(m) for m in event.body["members"]]
+        for member in members:
+            guild.members._members[member.id] = member
+
+        evt = GuildMemberChunk(
+            guild=guild,
+            members=members,
+            chunk_index=event.body["chunk_index"],
+            chunk_count=event.body["chunk_count"],
+            nonce=event.body.get("nonce"),
+        )
+        self._chunker.handle_member_chunk(event.shard_id, evt)
+
+        yield evt
 
     @staticmethod
     def parse_message_create(event: GatewayDispatch, factory: StatefulObjectFactory):

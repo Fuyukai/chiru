@@ -64,6 +64,10 @@ class Member(DiscordObject, RawMember, StatefulMixin):
     #: The guild ID that this member is for.
     guild_id: int = attr.ib(init=False)
 
+    def __attrs_post_init__(self):
+        if self.user is not None:
+            self.id = self.user.id
+
     @property
     def guild(self) -> Guild:
         """

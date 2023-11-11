@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
 from importlib.metadata import version
 from math import ceil
-from typing import Any, Mapping, overload
+from typing import Any, overload
 
 import anyio
 import httpx

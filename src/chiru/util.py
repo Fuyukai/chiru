@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import AsyncContextManager, TypeVar
 
@@ -66,3 +67,12 @@ def open_limiting_nursery(max_tasks: int = 16) -> AsyncContextManager[CapacityLi
             yield CapacityLimitedNursery(n, CapacityLimiter(max_tasks))
 
     return _do()
+
+
+@asynccontextmanager
+async def cancel_on_close(group: TaskGroup) -> AsyncGenerator[TaskGroup, None]:
+    async with group:
+        try:
+            yield group
+        finally:
+            group.cancel_scope.cancel()

@@ -3,16 +3,18 @@ from collections import defaultdict
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from functools import partial
-from typing import Any, TypeVar, overload
+from typing import Any, TypeVar, final, overload
 
+import anyio
 import attr
 import bitarray
 
 from chiru.bot import ChiruBot
+from chiru.event.chunker import GuildChunker
 from chiru.event.model import DispatchedEvent, Ready, ShardReady
 from chiru.event.parser import CachedEventParser
 from chiru.gateway.event import GatewayDispatch, IncomingGatewayEvent
-from chiru.util import CapacityLimitedNursery, open_limiting_nursery
+from chiru.util import CapacityLimitedNursery, cancel_on_close, open_limiting_nursery
 
 GwEventT = TypeVar("GwEventT", bound=IncomingGatewayEvent)
 DsEventT = TypeVar("DsEventT", bound=DispatchedEvent)
@@ -23,6 +25,7 @@ DsEventT = TypeVar("DsEventT", bound=DispatchedEvent)
 logger = logging.getLogger(__name__)
 
 
+@final
 @attr.s(frozen=True, slots=True, kw_only=True)
 class EventContext:
     """
@@ -39,9 +42,10 @@ class EventContext:
     sequence: int = attr.ib()
 
 
+@final
 class StatefulEventDispatcher:
     """
-    An event dispatcher that uses the client's object
+    An event dispatcher that uses the client's object cache to store stateful objects.
     """
 
     def __init__(
@@ -49,12 +53,21 @@ class StatefulEventDispatcher:
         bot: ChiruBot,
         nursery: CapacityLimitedNursery,
     ):
-        self._nursery = nursery
+        #: The
+        self.client = bot
 
-        self._parser = CachedEventParser(bot.object_cache)
+        #: The guild member chunker for this event dispatcher.
+        self.chunker = GuildChunker(self, bot.cached_gateway_info.shards)
+
+        #: The cache-based event parser for this dispatcher.
+        self.parser = CachedEventParser(
+            bot.object_cache, bot.cached_gateway_info.shards, self.chunker
+        )
 
         # no point type hinting this, too annoying.
         self._events = defaultdict(list)
+
+        self._nursery = nursery
 
         # global ready state checking.
         # bit array of the shards that have fired a ShardReady or not.
@@ -116,12 +129,20 @@ class StatefulEventDispatcher:
 
         self._events[event].append(handler)
 
-    async def run_forever(self, client: ChiruBot):
+    async def run_forever(self, *, enable_chunking: bool = True):
         """
         Runs the event dispatcher forever for the provided client.
+
+        :param chunker: An optional :class:`.GuildChunker` for downloading
         """
 
-        async with client.start_receiving_events() as stream:
+        async with (
+            self.client.start_receiving_events() as stream,
+            cancel_on_close(anyio.create_task_group()) as group,
+        ):
+            if enable_chunking:
+                group.start_soon(partial(self.chunker.send_to_outgoing, stream))
+
             async for event in stream:
                 # all gateway events need to be dispatched normally to potential handlers
                 await self._dispatch_event(type(event), ctx=None, event=event)
@@ -135,7 +156,9 @@ class StatefulEventDispatcher:
                     sequence=event.sequence,
                 )
 
-                for dispatched in self._parser.get_parsed_events(client.stateful_factory, event):
+                for dispatched in self.parser.get_parsed_events(
+                    self.client.stateful_factory, event
+                ):
                     if isinstance(dispatched, ShardReady):
                         self._ready_shards[event.shard_id] = True
 
@@ -147,7 +170,9 @@ class StatefulEventDispatcher:
 
 @asynccontextmanager
 async def create_stateful_dispatcher(
-    bot: ChiruBot, *, max_tasks: int = 16
+    bot: ChiruBot,
+    *,
+    max_tasks: int = 16,
 ) -> AsyncGenerator[StatefulEventDispatcher, None]:
     """
     Creates a new :class:`.StatefulEventDispatcher`.
