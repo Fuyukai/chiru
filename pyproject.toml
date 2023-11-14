@@ -6,6 +6,17 @@ authors = ["Lura Skye <l@veriny.tf>"]
 readme = "README.rst"
 packages = [{include = "chiru", from = "src"}]
 license = "LGPL-3.0-or-later"
+classifiers = [
+    "Framework :: Trio",
+    "Framework :: AnyIO",
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Typing :: Typed",
+]
 
 [tool.poetry.dependencies]
 python = "^3.11"
@@ -24,6 +35,7 @@ target-version = ["py311"]
 [tool.ruff]
 target-version = "py311"
 respect-gitignore = true
+fix = true
 src = ["src/chiru"]
 line-length = 100
 
