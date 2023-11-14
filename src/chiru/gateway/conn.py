@@ -3,8 +3,9 @@ import enum
 import json
 import logging
 import zlib
+from collections.abc import Callable
 from functools import partial
-from typing import Any
+from typing import Any, NoReturn
 
 import anyio
 import attr
@@ -226,6 +227,7 @@ async def _super_loop(
     ws: WebsocketClient,
     central_channel: MemoryObjectReceiveStream[OutgoingGatewayEvent | WsMessage],
     event_channel: MemoryObjectSendStream[IncomingGatewayEvent],
+    start_send_fn: Callable[[], None]
 ):
     """
     The main super loop process that deals with the websocket.
@@ -434,6 +436,11 @@ async def _super_loop(
                     f"We have been issued a session for user {username} ({id})"
                 )
 
+                start_send_fn()
+            
+            elif dispatch_name == "RESUME":
+                start_send_fn()
+
             event = GatewayDispatch(
                 shard_id=shared_state.shard_id,
                 event_name=dispatch_name,
@@ -485,15 +492,24 @@ async def run_gateway_loop(
     shard_count: int,
     outbound_channel: MemoryObjectReceiveStream[OutgoingGatewayEvent],
     inbound_channel: MemoryObjectSendStream[IncomingGatewayEvent],
-):
+    intents: int = INTENTS,
+) -> NoReturn:
     """
     Runs the gateway loop forever. This should be ran in its own task.
 
-    :param initial_url: The initial URL to connect to the gateway to.
+    :param initial_url: The initial URL to connect to the gateway to. This will only be used for
+        the first connection; all subsequent connections will use the URL returned in the
+        ``READY`` packet.
+
     :param token: The Bot token to use when identifying.
     :param shard_id: The shard ID that this gateway will use.
     :param shard_count: The number of shards in total that will be spawned, including this one.
-    :param outbound_channel: The channel to receive outbound events on.
+    :param outbound_channel: The channel that outbound gateway events will be read from. This is
+        the mechanism for sending control messages such as presence updates or user-initiated closes
+        through the gateway.
+
+        Incoming messages will be buffered automatically across reconnects, with messages that have
+        failed to send being retried after reconnection.
     :param inbound_channel: The channel to inbound publish gateway events on.
     """
 
@@ -516,10 +532,11 @@ async def run_gateway_loop(
             write, read = anyio.create_memory_object_stream[Any]()
 
             nursery.start_soon(partial(_gw_receive_pump, ws, write))
-            nursery.start_soon(partial(_gw_send_pump, shared_state, outbound_channel, write))
+            send_fn = partial(_gw_send_pump, shared_state, outbound_channel, write)
+            start_send_fn = partial(nursery.start_soon, send_fn)
 
             try:
-                await _super_loop(shared_state, ws, read, inbound_channel)
+                await _super_loop(shared_state, ws, read, inbound_channel, start_send_fn)
             except WebsocketClosedError as e:
                 match e.code:
                     case 4004:
