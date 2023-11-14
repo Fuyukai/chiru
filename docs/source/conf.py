@@ -22,12 +22,14 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx_autodoc_typehints",
     "sphinxcontrib.jquery",
+    "sphinx_inline_tabs",
 ]
 
 templates_path = ["_templates"]
 exclude_patterns = []
 
 autodoc_default_options = {
+    "members": None,
     "member-order": "bysource",
     "show-inheritance": None,
 }
@@ -37,6 +39,7 @@ intersphinx_mapping = {
     "anyio": ("https://anyio.readthedocs.io/en/stable/", None),
     "trio": ("https://trio.readthedocs.io/en/stable/", None),
     "arrow": ("https://arrow.readthedocs.io/en/latest/", None),
+    "cattr": ("https://catt.rs/en/stable/", None),  # damn, that's a nice domain hack
 }
 
 

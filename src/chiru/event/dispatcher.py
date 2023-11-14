@@ -60,7 +60,7 @@ class StatefulEventDispatcher:
         self.chunker: GuildChunker = GuildChunker()
 
         #: The cache-based event parser for this dispatcher.
-        self.parser = CachedEventParser(
+        self.parser: CachedEventParser = CachedEventParser(
             bot.object_cache, bot.cached_gateway_info.shards, self.chunker
         )
 
@@ -138,6 +138,9 @@ class StatefulEventDispatcher:
             - If ``event`` is a :class:`.GatewayEvent`, this only takes the event instance.
             - If ``event`` is a :class:`.DispatchedEvent`, this takes a :class:`.EventContext`
               as well as the event instance.
+
+            The same function can be registered for multiple events. (You can type hint it with
+            a union type.)
         """
 
         logger.debug(f"Registered event callable {handler} handling type '{event}'")
@@ -149,7 +152,7 @@ class StatefulEventDispatcher:
         Runs the event dispatcher forever for the provided client.
 
         :param enable_chunking: If automatic guild member chunking will be enabled or not.
-            See :ref:`chunking` for more information.
+            See :ref:`guild-chunking` for more information.
         """
 
         async with (

@@ -45,3 +45,8 @@ p, li, strong, em, a {
     display: inline !important;
     padding: 0 !important;
 }
+
+/* silly hack to prevent toctree captions showing inline */
+section#low-level-api span.caption-text { display: none; }
+section#high-level-api span.caption-text { display: none; }
+section#getting-started span.caption-text { display: none; }
