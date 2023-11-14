@@ -1,6 +1,7 @@
 import logging
 from collections.abc import AsyncIterator
 from functools import partial
+from typing import NoReturn
 
 import anyio
 import attr
@@ -48,13 +49,13 @@ class GatewayCollection:
         ]()
 
     def __aiter__(self) -> AsyncIterator[IncomingGatewayEvent]:
-        return aiter(self._event_read)  # type: ignore
+        return aiter(self._event_read)
 
     async def _run_gateway_loop(
         self,
         *,
         shard_id: int,
-    ):
+    ) -> NoReturn:
         with CancelScope() as scope, self._event_write.clone() as event_channel:
             outbound_write, outbound_read = anyio.create_memory_object_stream[
                 OutgoingGatewayEvent
@@ -77,14 +78,14 @@ class GatewayCollection:
                 outbound_write.close()
                 self._gateway_ctl_channels[shard_id] = None
 
-    def _start_shard(self, shard_id: int):
+    def _start_shard(self, shard_id: int) -> None:
         self._nursery.start_soon(partial(self._run_gateway_loop, shard_id=shard_id))
 
     async def send_to_shard(
         self,
         shard_id: int,
         message: OutgoingGatewayEvent,
-    ):
+    ) -> None:
         """
         Sends a single outgoing gateway message.
         """

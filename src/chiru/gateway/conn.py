@@ -5,6 +5,7 @@ import logging
 import zlib
 from collections.abc import Callable
 from functools import partial
+from logging import Logger
 from typing import Any, NoReturn
 
 import anyio
@@ -100,10 +101,10 @@ class GatewaySharedState:
 
     logger: logging.Logger = attr.ib(init=False)
 
-    def __attrs_post_init__(self):
+    def __attrs_post_init__(self) -> None:
         self.logger = logging.getLogger(f"chiru.gateway:shard-{self.shard_id}")
 
-    def reset(self):
+    def reset(self) -> None:
         self.session_id = None
         self.sequence = 0
         self.heartbeat_acks = 0
@@ -115,16 +116,16 @@ class GatewaySenderWrapper:
     Wraps several common operations for sending on the gateway.
     """
 
-    def __init__(self, ws: WebsocketClient, logger: logging.Logger):
+    def __init__(self, ws: WebsocketClient, logger: Logger) -> None:
         self._ws = ws
         self.logger = logger
 
-    async def send_heartbeat(self, *, seq: int):
+    async def send_heartbeat(self, *, seq: int) -> None:
         self.logger.debug(f"CLI -> SRV: Heartbeat (seq: {seq})")
 
         body = {"op": GatewayOp.HEARTBEAT, "d": seq}
 
-        return await self._ws.send_message(json.dumps(body))
+        await self._ws.send_message(json.dumps(body))
 
     async def send_identify(
         self,
@@ -132,7 +133,8 @@ class GatewaySenderWrapper:
         token: str,
         shard_id: int,
         shard_count: int,
-    ):
+        intents: int,
+    ) -> None:
         self.logger.debug("CLI -> SRV: Identify")
 
         body = {
@@ -142,14 +144,14 @@ class GatewaySenderWrapper:
                 "properties": {"os": "System V", "browser": "Chiru", "device": "Chiru"},
                 "compress": True,
                 "shard": [shard_id, shard_count],
-                "intents": INTENTS,
+                "intents": intents,
                 "large_threshold": 50,
             },
         }
 
-        return await self._ws.send_message(json.dumps(body))
+        await self._ws.send_message(json.dumps(body))
 
-    async def send_resume(self, *, token: str, session_id: str, seq: int):
+    async def send_resume(self, *, token: str, session_id: str, seq: int) -> None:
         self.logger.debug(f"CLI -> SRV: Resume (seq: {seq})")
 
         body = {
@@ -161,9 +163,9 @@ class GatewaySenderWrapper:
             },
         }
 
-        return await self._ws.send_message(json.dumps(body))
+        await self._ws.send_message(json.dumps(body))
 
-    async def send_chunk_request(self, payload: GatewayMemberChunkRequest):
+    async def send_chunk_request(self, payload: GatewayMemberChunkRequest) -> None:
         self.logger.debug(f"CLI -> SRV: Member Chunk Request ({payload.guild_id})")
 
         body: dict[str, Any] = {
@@ -185,12 +187,12 @@ class GatewaySenderWrapper:
         if payload.nonce is not None:
             body["d"]["nonce"] = payload.nonce
 
-        return await self._ws.send_message(json.dumps(body))
+        await self._ws.send_message(json.dumps(body))
 
 
 async def _gw_receive_pump(
     ws: WebsocketClient, channel: MemoryObjectSendStream[OutgoingGatewayEvent | WsMessage]
-):
+) -> None:
     """
     The Gateway receive pumper. Takes incoming messages from the Gateway and passes them along
     to our internal channel.
@@ -208,7 +210,7 @@ async def _gw_send_pump(
     shared_state: GatewaySharedState,
     external_chan: MemoryObjectReceiveStream[OutgoingGatewayEvent],
     loop_chan: MemoryObjectSendStream[OutgoingGatewayEvent | WsMessage],
-):
+) -> NoReturn:
     """
     The Gateway send pumper. Takes incoming messages from the bot and passes them along to our
     internal channel.
@@ -227,8 +229,9 @@ async def _super_loop(
     ws: WebsocketClient,
     central_channel: MemoryObjectReceiveStream[OutgoingGatewayEvent | WsMessage],
     event_channel: MemoryObjectSendStream[IncomingGatewayEvent],
-    start_send_fn: Callable[[], None]
-):
+    start_send_fn: Callable[[], None],
+    intents: int,
+) -> NoReturn:
     """
     The main super loop process that deals with the websocket.
     """
@@ -361,14 +364,16 @@ async def _super_loop(
                     token=shared_state.token,
                     shard_id=shared_state.shard_id,
                     shard_count=shared_state.shard_count,
+                    intents=intents,
                 )
 
-            evt = GatewayHello(
-                shard_id=shared_state.shard_id,
-                heartbeat_interval=time_inbetween_heartbeats,
-            )
             with contextlib.suppress(WouldBlock):
-                event_channel.send_nowait(evt)
+                event_channel.send_nowait(
+                    GatewayHello(
+                        shard_id=shared_state.shard_id,
+                        heartbeat_interval=time_inbetween_heartbeats,
+                    )
+                )
 
         elif opcode == GatewayOp.RECONNECT:
             # Discord wants us to reconnect. Okay.
@@ -376,9 +381,8 @@ async def _super_loop(
             shared_state.logger.debug("SRV -> CLI: Reconnect")
             await ws.close(code=1001, reason="Gateway is reconnecting!")
 
-            evt = GatewayReconnectRequested(shard_id=shared_state.shard_id)
             with contextlib.suppress(WouldBlock):
-                event_channel.send_nowait(evt)
+                event_channel.send_nowait(GatewayReconnectRequested(shard_id=shared_state.shard_id))
 
             raise WebsocketClosedError(code=1001, reason="Gateway is reconnecting!")
 
@@ -391,13 +395,13 @@ async def _super_loop(
             shared_state.logger.debug(f"Received heartbeat ack #{shared_state.heartbeat_acks}")
             shared_state.heartbeat_acks += 1
 
-            evt = GatewayHeartbeatAck(
-                shard_id=shared_state.shard_id,
-                heartbeat_ack_count=shared_state.heartbeat_acks,
-            )
-
             with contextlib.suppress(WouldBlock):
-                event_channel.send_nowait(evt)
+                event_channel.send_nowait(
+                    GatewayHeartbeatAck(
+                        shard_id=shared_state.shard_id,
+                        heartbeat_ack_count=shared_state.heartbeat_acks,
+                    )
+                )
 
         elif opcode == GatewayOp.HEARTBEAT:
             # Occasionally, Discord asks us for a heartbeat. I don't really know why, but they do.
@@ -407,13 +411,14 @@ async def _super_loop(
             await wrapped.send_heartbeat(seq=shared_state.sequence)
             shared_state.heartbeat_number += 1
 
-            evt = GatewayHeartbeatSent(
-                shard_id=shared_state.shard_id,
-                heartbeat_count=shared_state.heartbeat_number,
-                sequence=shared_state.sequence,
-            )
             with contextlib.suppress(WouldBlock):
-                event_channel.send_nowait(evt)
+                event_channel.send_nowait(
+                    GatewayHeartbeatSent(
+                        shard_id=shared_state.shard_id,
+                        heartbeat_count=shared_state.heartbeat_number,
+                        sequence=shared_state.sequence,
+                    )
+                )
 
         elif opcode == GatewayOp.DISPATCH:
             # Dispatches update the sequence data, which is needed for heartbeats.
@@ -437,17 +442,18 @@ async def _super_loop(
                 )
 
                 start_send_fn()
-            
+
             elif dispatch_name == "RESUME":
                 start_send_fn()
 
-            event = GatewayDispatch(
-                shard_id=shared_state.shard_id,
-                event_name=dispatch_name,
-                sequence=seq,
-                body=raw_data,
+            await event_channel.send(
+                GatewayDispatch(
+                    shard_id=shared_state.shard_id,
+                    event_name=dispatch_name,
+                    sequence=seq,
+                    body=raw_data,
+                )
             )
-            await event_channel.send(event)
 
         elif opcode == GatewayOp.INVALIDATE_SESSION:
             # Discord is telling us that we need to get a new session.
@@ -473,11 +479,13 @@ async def _super_loop(
                     token=shared_state.token,
                     shard_id=shared_state.shard_id,
                     shard_count=shared_state.shard_count,
+                    intents=intents,
                 )
 
-            evt = GatewayInvalidateSession(shard_id=shared_state.shard_id, resumable=raw_data)
             with contextlib.suppress(WouldBlock):
-                event_channel.send_nowait(evt)
+                event_channel.send_nowait(
+                    GatewayInvalidateSession(shard_id=shared_state.shard_id, resumable=raw_data)
+                )
 
         else:
             shared_state.logger.warning("Unknown event...")
@@ -510,7 +518,19 @@ async def run_gateway_loop(
 
         Incoming messages will be buffered automatically across reconnects, with messages that have
         failed to send being retried after reconnection.
-    :param inbound_channel: The channel to inbound publish gateway events on.
+
+    :param inbound_channel: The channel that incoming gateway events will be sent to.
+
+        This channel should, ideally, have a buffer size of zero to prevent less important events
+        from clogging up the channel (as they are sent without waiting, and simply discarded if
+        nobody is listening).
+
+    :param intents: The `Gateway Intents <https://discord.com/developers/docs/topics/gateway#gateway-intents>`_
+        configuration that should be used for incoming events. By default, this is set to *all*
+        intents.
+
+        Note that Chiru's high-level functionality won't work without privileged intents, and the
+        gateway code will fail unrecoverably if privileged intents are requested but not available.
     """
 
     shared_state = GatewaySharedState(
@@ -536,7 +556,7 @@ async def run_gateway_loop(
             start_send_fn = partial(nursery.start_soon, send_fn)
 
             try:
-                await _super_loop(shared_state, ws, read, inbound_channel, start_send_fn)
+                await _super_loop(shared_state, ws, read, inbound_channel, start_send_fn, intents)
             except WebsocketClosedError as e:
                 match e.code:
                     case 4004:

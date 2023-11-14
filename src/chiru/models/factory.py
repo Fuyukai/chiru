@@ -22,29 +22,30 @@ if TYPE_CHECKING:
 
 class StatefulObjectFactory:
     """
-    Produces stateful objects from raw JSON bodies.
+    Produces stateful objects from raw JSON bodies. This requires a :class:`.ChiruBot` to be
+    provided which will be set on the stateful objects.
     """
 
     def __init__(self, client: ChiruBot):
-        self._client = client
+        self._client: ChiruBot = client
 
-        self.object_cache = ObjectCache()
+        self.object_cache: ObjectCache = ObjectCache()
 
     def make_user(
         self,
         user_data: Mapping[str, Any],
     ) -> User:
         """
-        Creates a new stateful :class:`.User`.
+        Creates a new stateful :class:`.User` from a user body.
         """
 
         obb = CONVERTER.structure(user_data, User)
-        obb._chiru_set_client(self._client)  # type: ignore
+        obb._chiru_set_client(self._client)
         return obb
 
     def make_member(self, user_data: Mapping[str, Any]) -> Member:
         """
-        Creates a new stateful :class:`.Member`.
+        Creates a new stateful :class:`.Member` from a member body.
         """
 
         obb = CONVERTER.structure(user_data, Member)
@@ -56,7 +57,8 @@ class StatefulObjectFactory:
 
     def make_message(self, message_data: Mapping[str, Any]) -> Message:
         """
-        Creates a new stateful :class:`.Message`.
+        Creates a new stateful :class:`.Message` from a message body. This will also create
+        stateful :class:`.User` instances for :attr:`.Message.author`.
         """
 
         obb = CONVERTER.structure(message_data, Message)
@@ -77,7 +79,10 @@ class StatefulObjectFactory:
 
         return obb
 
-    def make_guild(self, guild_data: Mapping[str, Any]) -> Guild | UnavailableGuild:
+    def make_guild(
+        self,
+        guild_data: Mapping[str, Any],
+    ) -> Guild | UnavailableGuild:
         """
         Creates a new stateful :class:`.Guild`.
         """

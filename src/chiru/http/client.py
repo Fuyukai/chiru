@@ -57,36 +57,41 @@ class ChiruHttpClient:
         httpx_client: AsyncClient,
         token: str,
         endpoints: Endpoints | None = None,
+        user_agent: str | None = None,
     ):
         """
-        :param nursery: The task group to spawn
+        :param nursery: The task group to spawn ratelimits in.
         :param httpx_client: The ``httpx`` ``AsyncClient`` to send the actual network resources on.
-                             This object's lifecycle should be managed separately from the
-                             HttpClient.
         :param token: The Bot user token to use.
         :param endpoints: The namespace of API endpoints to use for routes.
+        :param user_agent: A custom User-Agent header to send.
         """
 
         self.endpoints: Endpoints = endpoints or Endpoints()
         self._http = httpx_client
 
-        package_version = version("chiru")
+        if user_agent is None:
+            package_version = version("chiru")
+            user_agent = f"DiscordBot (https://github.com/Fuyukai/chiru, {package_version})"
+
         self._http.headers.update(
             {
                 "Authorization": f"Bot {token}",
-                "User-Agent": f"DiscordBot (https://github.com/TBD/TBD, {package_version})",
+                "User-Agent": user_agent,
             }
         )
-        self._http.base_url = self.endpoints.base_url
+
+        # mypy doesn't like these.
+        self._http.base_url = self.endpoints.base_url  # type: ignore
         # fuck you! we manage our own timeouts
-        self._http.timeout = None
+        self._http.timeout = None  # type: ignore
 
         # rate limit helper
         self._ratelimiter = RatelimitManager(nursery)
         # immediately acquired during request processing, and held post-request processing
         self._global_expiration: float = 0.0
 
-    async def _wait_for_global_ratelimit(self):
+    async def _wait_for_global_ratelimit(self) -> None:
         if self._global_expiration > anyio.current_time():
             await anyio.sleep_until(self._global_expiration)
 
@@ -104,9 +109,11 @@ class ChiruHttpClient:
         Performs a request to the specified endpoint path. This will automatically deal with
         rate limits.
 
-        :param bucket: The rate-limiting bucket to use. Arbitrary hashable object.
+        :param bucket: The rate-limiting bucket to use. This should be an arbitrary string that
+            uniquely identifies the resource being requested.
+
         :param method: The HTTP method for the request.
-        :param path: The path to use (not the URL!)
+        :param path: The path to request. This is not the full URL.
 
         Optional parameters:
 
@@ -178,7 +185,7 @@ class ChiruHttpClient:
 
     async def get_gateway_info(self) -> GatewayResponse:
         """
-        Gets the gateway info that the current bot should connect.
+        Gets the gateway info that the current bot should connect to.
         """
 
         resp = await self.request(bucket="gateway", method="GET", path=Endpoints.GET_GATEWAY)
@@ -220,7 +227,11 @@ class ChiruHttpClient:
         Sends a single message to a channel.
 
         :param channel_id: The ID of the channel to send the message to.
-        :param content: The textual content to send.
+        :param content: The textual content to send. Optional if this message contains an embed or
+            attachment.
+        :param factory: The object factory to create stateful message objects from.
+        :return: A :class:`.Message` if a :class:`.StatefulObjectFactory` was provided; otherwise,
+            a :class:`.RawMessage` representing the created message object returned from Discord.
         """
 
         resp = await self.request(

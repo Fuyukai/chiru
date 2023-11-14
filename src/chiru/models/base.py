@@ -20,7 +20,9 @@ class DiscordObject:
     Base class for all objects that have a Snowflake-based ID.
     """
 
-    #: The Snowflake-based ID for this object.
+    #: The Snowflake-based ID for this object. See
+    #: `Snowflakes <https://discord.com/developers/docs/reference#snowflakes>`_ for more information
+    #: on the format of this field.
     id: int = attr.ib()
 
     @property
@@ -45,5 +47,5 @@ class StatefulMixin:
 
     _client: ChiruBot = attr.ib(init=False)
 
-    def _chiru_set_client(self, bot: ChiruBot):
+    def _chiru_set_client(self, bot: ChiruBot) -> None:
         self._client = bot

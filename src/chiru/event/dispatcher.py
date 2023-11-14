@@ -3,7 +3,7 @@ from collections import defaultdict
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from functools import partial
-from typing import Any, TypeVar, final, overload
+from typing import Any, NoReturn, TypeVar, final, overload
 
 import anyio
 import attr
@@ -22,7 +22,7 @@ DsEventT = TypeVar("DsEventT", bound=DispatchedEvent)
 # roughly equiv to state.py in curious.
 # TODO: split out the actual event dispatching and the actual event parsing, maybe?
 
-logger = logging.getLogger(__name__)
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 @final
@@ -53,11 +53,11 @@ class StatefulEventDispatcher:
         bot: ChiruBot,
         nursery: CapacityLimitedNursery,
     ):
-        #: The
-        self.client = bot
+        #: The client object that this event dispatcher uses.
+        self.client: ChiruBot = bot
 
         #: The guild member chunker for this event dispatcher.
-        self.chunker = GuildChunker(self, bot.cached_gateway_info.shards)
+        self.chunker: GuildChunker = GuildChunker()
 
         #: The cache-based event parser for this dispatcher.
         self.parser = CachedEventParser(
@@ -67,14 +67,14 @@ class StatefulEventDispatcher:
         # no point type hinting this, too annoying.
         self._events = defaultdict(list)  # type: ignore
 
-        self._nursery = nursery
+        self._nursery: CapacityLimitedNursery = nursery
 
         # global ready state checking.
         # bit array of the shards that have fired a ShardReady or not.
         self._ready_shards = bitarray.bitarray("0" * bot.cached_gateway_info.shards)
 
     @staticmethod
-    async def _run_safely(fn: Callable[[], Awaitable[None]]):
+    async def _run_safely(fn: Callable[[], Awaitable[None]]) -> None:
         try:
             await fn()
         except Exception as e:
@@ -85,7 +85,7 @@ class StatefulEventDispatcher:
         event_klass: type[Any],
         ctx: EventContext | None,
         event: Any,
-    ):
+    ) -> None:
         """
         Spawns a single event into the nursery.
         """
@@ -128,17 +128,28 @@ class StatefulEventDispatcher:
     ) -> None:
         """
         Adds an event handler for a low-level gateway event.
+
+        :param event: Either an incoming :class:`.IncomingGatewayEvent` or a
+            :class:`.DispatchedEvent` to listen for.
+
+        :param handler: The event handler for said event. The type of this depends on the type of
+            ``event``:
+
+            - If ``event`` is a :class:`.GatewayEvent`, this only takes the event instance.
+            - If ``event`` is a :class:`.DispatchedEvent`, this takes a :class:`.EventContext`
+              as well as the event instance.
         """
 
         logger.debug(f"Registered event callable {handler} handling type '{event}'")
 
         self._events[event].append(handler)
 
-    async def run_forever(self, *, enable_chunking: bool = True):
+    async def run_forever(self, *, enable_chunking: bool = True) -> NoReturn:  # type: ignore[misc]
         """
         Runs the event dispatcher forever for the provided client.
 
-        :param chunker: An optional :class:`.GuildChunker` for downloading
+        :param enable_chunking: If automatic guild member chunking will be enabled or not.
+            See :ref:`chunking` for more information.
         """
 
         async with (
@@ -146,7 +157,7 @@ class StatefulEventDispatcher:
             cancel_on_close(anyio.create_task_group()) as group,
         ):
             if enable_chunking:
-                group.start_soon(partial(self.chunker.send_to_outgoing, stream))
+                group.start_soon(partial(self.chunker.send_to_outgoing, collection=stream))
 
             async for event in stream:
                 # all gateway events need to be dispatched normally to potential handlers

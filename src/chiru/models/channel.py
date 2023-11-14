@@ -85,7 +85,7 @@ class RawChannel(DiscordObject):
     """
 
     @classmethod
-    def configure_converter(cls, converter: Converter):
+    def configure_converter(cls, converter: Converter) -> None:
         for klass in (cls, Channel):
             converter.register_structure_hook(
                 klass,

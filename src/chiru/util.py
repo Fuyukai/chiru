@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Callable
 from contextlib import asynccontextmanager
-from typing import TypeVar
+from typing import Any, TypeVar
 
 import anyio
 from anyio import CancelScope, CapacityLimiter
@@ -20,20 +20,20 @@ class CapacityLimitedNursery:
         self._nursery = real_nursery
         self._limiter = limiter
 
-    async def start(self, fn):
+    async def start(self, fn: Callable[..., Any]) -> None:
         """
         Starts a new task. This will block until the capacity limiter has a token available.
         """
 
-        async def inner(task_status):
+        async def _inner(task_status):
             async with self._limiter:
                 task_status.started()
                 await fn()
 
-        await self._nursery.start(inner)
+        await self._nursery.start(_inner)
 
     @property
-    def available_tasks(self):
+    def available_tasks(self) -> float:
         return self._limiter.available_tokens
 
     @property

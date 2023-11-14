@@ -1,3 +1,5 @@
+from types import NotImplementedType
+
 import attr
 import cattrs
 from cattrs.gen import make_dict_structure_fn
@@ -12,7 +14,7 @@ class RawUser(DiscordObject):
     """
 
     @classmethod
-    def configure_converter(cls, converter: cattrs.Converter):
+    def configure_converter(cls, converter: cattrs.Converter) -> None:
         converter.register_structure_hook(
             cls, make_dict_structure_fn(cls, converter, _cattrs_forbid_extra_keys=False)
         )
@@ -54,7 +56,7 @@ class RawUser(DiscordObject):
     def __hash__(self) -> int:
         return hash(self.id)
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool | NotImplementedType:
         if not isinstance(other, RawUser):
             return NotImplemented
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 import anyio
@@ -19,7 +20,7 @@ class RatelimitManager:
         self._ratelimits: dict[tuple[str, str], Ratelimit] = {}
         self._nursery = nursery
 
-    def _task_got_too_lonely(self, bucket: tuple[str, str]):
+    def _task_got_too_lonely(self, bucket: tuple[str, str]) -> None:
         logger.debug(f"Discarding ratelimit for bucket {bucket} due to timeout")
 
         rl = self._ratelimits.pop(bucket, None)
@@ -67,7 +68,7 @@ class Ratelimit:
         self._semaphore = anyio.Semaphore(initial_value=1)
         nursery.start_soon(self._loop)
 
-    def apply_ratelimit_statistics(self, expiration: float, limit: int):
+    def apply_ratelimit_statistics(self, expiration: float, limit: int) -> None:
         """
         Applies ratelimit statistics after a request completes successfully.
         """
@@ -75,7 +76,7 @@ class Ratelimit:
         self._max_count = limit
         self._wakeup_time = anyio.current_time() + expiration
 
-    async def _loop(self):
+    async def _loop(self) -> None:
         """
         Loops forever, refilling the semaphore every time the wakeup time expires.
         """
@@ -115,7 +116,7 @@ class Ratelimit:
             self._manager._task_got_too_lonely(self._bucket)
 
     @asynccontextmanager
-    async def acquire_ratelimit_token(self):
+    async def acquire_ratelimit_token(self) -> AsyncGenerator[None, None]:
         """
         Gets a new ratelimit token.
         """

@@ -6,14 +6,30 @@ from chiru.models.guild import Guild
 from chiru.models.member import Member
 from chiru.models.message import Message
 
+__all__ = (
+    "DispatchedEvent",
+    "Connected",
+    "ShardReady",
+    "Ready",
+    "GuildStreamed",
+    "GuildAvailable",
+    "GuildJoined",
+    "InvalidGuildChunk",
+    "GuildMemberChunk",
+    "MessageCreate",
+)
+
 
 class DispatchedEvent:
     """
     Marker interface for dispatched events.
     """
 
+    __slots__ = ()
+
 
 @final
+@attr.s(str=True, slots=True)
 class Connected(DispatchedEvent):
     """
     Published when a single shard has successfully connected to the gateway.
@@ -21,6 +37,7 @@ class Connected(DispatchedEvent):
 
 
 @final
+@attr.s(str=True, slots=True)
 class ShardReady(DispatchedEvent):
     """
     Published when a single shard has streamed all guilds.
@@ -28,6 +45,7 @@ class ShardReady(DispatchedEvent):
 
 
 @final
+@attr.s(str=True, slots=True)
 class Ready(DispatchedEvent):
     """
     Published when all shards are ready.

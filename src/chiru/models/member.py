@@ -21,7 +21,7 @@ class RawMember:
     """
 
     @classmethod
-    def configure_converter(cls, converter: Converter):
+    def configure_converter(cls, converter: Converter) -> None:
         for klass in (cls, Member):
             converter.register_structure_hook(
                 klass,

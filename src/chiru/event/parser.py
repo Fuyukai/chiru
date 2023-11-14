@@ -42,29 +42,45 @@ class CachedEventParser:
         self,
         cache: ObjectCache,
         shard_count: int,
-        chunker: GuildChunker,
-    ):
-        self._cache = cache
+        chunker: GuildChunker | None = None,
+    ) -> None:
+        """
+        :param cache: The :class:`.ObjectCache` to store the created objects in.
+        :param shard_count: The number of shards that the bot is using. Used primarily for handling
+            guild streaming and per-shard READY.
 
-        self._chunker = chunker
+        :param chunker: The :class:`.GuildChunker` to use for automatically chunking incoming
+            guilds. This may be None if you don't want to have automatic member chunking.
+
+            See :ref:`guild-chunking` for more information.
+        """
+
+        self._cache: ObjectCache = cache
+
+        self._chunker: GuildChunker | None = chunker
 
         #: A list of per-shard shared mutable state.
-        self.per_shard_state = [PerShardState()] * shard_count
+        self.per_shard_state: list[PerShardState] = [PerShardState()] * shard_count
 
     def get_parsed_events(
         self, factory: StatefulObjectFactory, event: GatewayDispatch
     ) -> list[DispatchedEvent]:
         """
         Gets a list of parsed events from the provided :class:`.GatewayDispatch` gateway event.
+
+        :param factory: The :class:`.StatefulObjectFactory` that cached objects will be stored into.
+        :param event: The :class:`.GatewayDispatch` event that high-level events will be parsed
+            from.
+        :return: A list of :class:`.DispatchedEvent` instances that this event produced, if any.
         """
 
-        fn = getattr(self, f"parse_{event.event_name.lower()}", None)
+        fn = getattr(self, f"_parse_{event.event_name.lower()}", None)
         if fn is None:
             return []
 
         return list(fn(event, factory))
 
-    def parse_ready(
+    def _parse_ready(
         self,
         event: GatewayDispatch,
         factory: StatefulObjectFactory,
@@ -92,7 +108,7 @@ class CachedEventParser:
 
             yield Connected()
 
-    def parse_guild_create(
+    def _parse_guild_create(
         self, event: GatewayDispatch, factory: StatefulObjectFactory
     ) -> Iterable[DispatchedEvent]:
         """
@@ -130,9 +146,10 @@ class CachedEventParser:
             else:
                 yield GuildAvailable(created_guild)
 
-        self._chunker.handle_joined_guild(event.shard_id, created_guild)
+        if self._chunker is not None:
+            self._chunker.handle_joined_guild(event.shard_id, created_guild)
 
-    def parse_guild_members_chunk(
+    def _parse_guild_members_chunk(
         self, event: GatewayDispatch, factory: StatefulObjectFactory
     ) -> Iterable[DispatchedEvent]:
         """
@@ -161,12 +178,14 @@ class CachedEventParser:
             chunk_count=event.body["chunk_count"],
             nonce=event.body.get("nonce"),
         )
-        self._chunker.handle_member_chunk(event.shard_id, evt)
+
+        if self._chunker:
+            self._chunker.handle_member_chunk(event.shard_id, evt)
 
         yield evt
 
     @staticmethod
-    def parse_message_create(
+    def _parse_message_create(
         event: GatewayDispatch, factory: StatefulObjectFactory
     ) -> Iterable[DispatchedEvent]:
         """

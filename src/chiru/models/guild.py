@@ -29,7 +29,7 @@ class GuildChannelList(Mapping[int, Channel]):
 
         self._channels = channels or {}
 
-    @classmethod
+    @classmethod  # type: ignore[misc]
     def from_guild_packet(
         cls,
         packet: Mapping[str, Any],
@@ -42,7 +42,7 @@ class GuildChannelList(Mapping[int, Channel]):
         guild_id = int(packet["id"])
 
         channels: dict[int, Channel] = {}
-        for data in packet["channels"]:
+        for data in packet.get("channels", []):
             created_channel = factory.make_channel(data)
             created_channel.guild_id = guild_id
             channels[created_channel.id] = created_channel
@@ -67,7 +67,7 @@ class GuildMemberList(Mapping[int, Member]):
     def __init__(self, members: dict[int, Member]) -> None:
         self._members = members
 
-    @classmethod
+    @classmethod  # type: ignore
     def from_guild_packet(
         cls,
         packet: Mapping[str, Any],
@@ -80,7 +80,7 @@ class GuildMemberList(Mapping[int, Member]):
         guild_id = int(packet["id"])
 
         members: dict[int, Member] = {}
-        for data in packet["members"]:
+        for data in packet.get("members", []):
             created_member = factory.make_member(data)
             created_member.guild_id = guild_id
             members[created_member.id] = created_member
@@ -113,7 +113,7 @@ class RawGuild(DiscordObject):
     A single raw guild object (or server, in more common nomenclature).
     """
 
-    @staticmethod
+    @staticmethod  # type: ignore[misc]
     def unmap_to_id(
         converter: Converter,
         data: Any,
@@ -131,7 +131,7 @@ class RawGuild(DiscordObject):
         return {i.id: i for i in items}  # type: ignore
 
     @classmethod
-    def configure_converter(cls, converter: Converter):
+    def configure_converter(cls, converter: Converter) -> None:
         raw_channel_fn = override(struct_hook=partial(cls.unmap_to_id, converter))
         raw_member_fn = override(struct_hook=partial(cls.unmap_to_id, converter))
 
