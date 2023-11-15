@@ -89,14 +89,18 @@ class GuildMemberList(Mapping[int, Member]):
         return GuildMemberList(members)
 
     def _backfill_member_data(
-        self, factory: StatefulObjectFactory, member_data: dict[str, Any], user: User
-    ) -> None:
+        self,
+        factory: StatefulObjectFactory,
+        member_data: Mapping[str, Any],
+        user: User | None = None,
+    ) -> Member:
         """
         Backfills member data from the provided dict.
         """
 
         new_member = factory.make_member(member_data, user)
-        self._members[user.id] = new_member
+        self._members[new_member.id] = new_member
+        return new_member
 
     def __getitem__(self, __key: int) -> Member:
         return self._members[__key]

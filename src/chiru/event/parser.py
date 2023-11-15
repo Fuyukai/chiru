@@ -12,6 +12,7 @@ from chiru.event.model import (
     GuildAvailable,
     GuildJoined,
     GuildMemberChunk,
+    GuildMemberUpdate,
     GuildStreamed,
     InvalidGuildChunk,
     MessageCreate,
@@ -211,3 +212,13 @@ class CachedEventParser:
             guild.members._backfill_member_data(factory, event.body["member"], message.raw_author)
 
         yield MessageCreate(message=message)
+
+    def _parse_guild_member_update(
+        self, event: GatewayDispatch, factory: StatefulObjectFactory
+    ) -> Iterable[DispatchedEvent]:
+        guild_id = int(event.body["guild_id"])
+        guild = self._cache.get_available_guild(guild_id)
+
+        assert guild, "received member update for an invalid guild!"
+        created_member = guild.members._backfill_member_data(factory, event.body)
+        yield GuildMemberUpdate(member=created_member)

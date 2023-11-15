@@ -2,6 +2,7 @@ from typing import final
 
 import attr
 
+from chiru.models.channel import Channel
 from chiru.models.guild import Guild
 from chiru.models.member import Member
 from chiru.models.message import Message
@@ -119,12 +120,30 @@ class GuildMemberChunk(DispatchedEvent):
     nonce: str | None = attr.ib(default=None)
 
 
+@attr.s(frozen=True, slots=True, kw_only=True)
+class GuildMemberUpdate(DispatchedEvent):
+    """
+    Published when a member updates information about their profile in a guild.
+    """
+
+    #: The member that was updated.
+    member: Member = attr.ib()
+
+
 @final
 @attr.s(frozen=True, slots=True, kw_only=True)
 class MessageCreate(DispatchedEvent):
     """
-    Published when a message is created a channel.
+    Published when a message is created within a channel.
     """
 
     #: The message that was actually created.
     message: Message = attr.ib()
+
+    @property
+    def channel(self) -> Channel:
+        """
+        Gets the channel that this message was created in.
+        """
+
+        return self.message.channel
