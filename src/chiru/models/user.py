@@ -1,5 +1,4 @@
 from types import NotImplementedType
-from typing import Any
 
 import attr
 import cattrs

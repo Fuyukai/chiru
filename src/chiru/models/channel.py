@@ -7,6 +7,7 @@ import attr
 import cattr
 from cattr import Converter
 
+from chiru.mentions import AllowedMentions
 from chiru.models.base import DiscordObject, StatefulMixin
 from chiru.models.message import Message
 
@@ -64,16 +65,20 @@ class ChannelMessages:
     async def send(
         self,
         content: str | None = None,
+        allowed_mentions: AllowedMentions | None = None,
     ) -> Message:
         """
         Sends a single message to this channel.
 
         :param content: The raw textual content for this message.
+        :param allowed_mentions: A :class:`.AllowedMentions` instance to control what this message
+            is allowed to mention. For more information, see :ref:`allowed-mentions`.
         """
 
         return await self._channel._client.http.send_message(
             channel_id=self._channel.id,
             content=content,
+            allowed_mentions=allowed_mentions,
             factory=self._channel._client.stateful_factory,
         )
 

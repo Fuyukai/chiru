@@ -13,6 +13,7 @@ from httpx import AsyncClient, Response
 
 from chiru.http.ratelimit import RatelimitManager
 from chiru.http.response import GatewayResponse
+from chiru.mentions import AllowedMentions, _AllowedMentions
 from chiru.models.factory import StatefulObjectFactory
 from chiru.models.message import Message, RawMessage
 from chiru.models.oauth import OAuthApplication
@@ -205,7 +206,13 @@ class ChiruHttpClient:
     # TODO: Embeds.
     # TODO: Interactions.
     @overload
-    async def send_message(self, *, channel_id: int, content: str | None) -> RawMessage: ...
+    async def send_message(
+        self,
+        *,
+        channel_id: int,
+        content: str | None,
+        allowed_mentions: AllowedMentions | None = None,
+    ) -> RawMessage: ...
 
     @overload
     async def send_message(
@@ -213,6 +220,7 @@ class ChiruHttpClient:
         *,
         channel_id: int,
         content: str | None,
+        allowed_mentions: AllowedMentions | None = None,
         factory: StatefulObjectFactory,
     ) -> Message: ...
 
@@ -221,6 +229,7 @@ class ChiruHttpClient:
         *,
         channel_id: int,
         content: str | None = None,
+        allowed_mentions: AllowedMentions | None = None,
         factory: StatefulObjectFactory | None = None,
     ) -> RawMessage | Message:
         """
@@ -229,16 +238,26 @@ class ChiruHttpClient:
         :param channel_id: The ID of the channel to send the message to.
         :param content: The textual content to send. Optional if this message contains an embed or
             attachment.
+        :param allowed_mentions: A :class:`.AllowedMentions` instance to control what this message
+            is allowed to mention. For more information, see :ref:`allowed-mentions`.
+
         :param factory: The object factory to create stateful message objects from.
         :return: A :class:`.Message` if a :class:`.StatefulObjectFactory` was provided; otherwise,
             a :class:`.RawMessage` representing the created message object returned from Discord.
         """
 
+        body: dict[str, Any] = {"content": content}
+
+        if allowed_mentions is not None:
+            assert isinstance(allowed_mentions, _AllowedMentions)
+
+            body["allowed_mentions"] = allowed_mentions.to_dict()
+
         resp = await self.request(
             bucket=f"send-message:{channel_id}",
             method="POST",
             path=Endpoints.CHANNEL_MESSAGES.format(channel_id=channel_id),
-            body_json={"content": content},
+            body_json=body,
         )
 
         if factory:
