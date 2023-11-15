@@ -1,4 +1,5 @@
 from types import NotImplementedType
+from typing import Any
 
 import attr
 import cattrs
@@ -56,7 +57,7 @@ class RawUser(DiscordObject):
     def __hash__(self) -> int:
         return hash(self.id)
 
-    def __eq__(self, other) -> bool | NotImplementedType:
+    def __eq__(self, other: object) -> bool | NotImplementedType:
         if not isinstance(other, RawUser):
             return NotImplemented
 
