@@ -42,7 +42,7 @@ class ObjectCache:
         except KeyError:
             pass
 
-        for _id, guild in self.guilds.items():
+        for guild in self.guilds.values():
             if guild.unavailable:
                 continue
 
