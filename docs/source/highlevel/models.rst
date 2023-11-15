@@ -61,6 +61,11 @@ Stateful models can be created manually with the :class:`.StatefulObjectFactory`
     
     some_user_object = bot.stateful_factory.create_user(some_user)
 
+.. warning::
+
+    Stateful models should be considered immutable. (They are not frozen yet, but may be in the 
+    future). Do not hold direct references to them, as some operations will simply swap them out
+    from underneath you in the cache.
 
 
 .. autoclass:: chiru.models.factory.StatefulObjectFactory
