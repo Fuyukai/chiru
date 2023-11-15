@@ -207,7 +207,7 @@ class CachedEventParser:
                 mention_member = mention.pop("member")
                 mention_user = factory.make_user(mention)
                 guild.members._backfill_member_data(factory, mention_member, mention_user)
-            
+
             guild.members._backfill_member_data(factory, event.body["member"], message.raw_author)
 
         yield MessageCreate(message=message)
