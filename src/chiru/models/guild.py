@@ -11,6 +11,7 @@ from cattr import Converter, override
 from chiru.models.base import DiscordObject, StatefulMixin
 from chiru.models.channel import Channel, RawChannel
 from chiru.models.member import Member, RawMember
+from chiru.models.user import User
 
 if TYPE_CHECKING:
     from chiru.models.factory import StatefulObjectFactory
@@ -86,6 +87,19 @@ class GuildMemberList(Mapping[int, Member]):
             members[created_member.id] = created_member
 
         return GuildMemberList(members)
+    
+    def _backfill_member_data(
+        self, 
+        factory: StatefulObjectFactory,
+        member_data: dict[str, Any], 
+        user: User
+    ) -> None:
+        """
+        Backfills member data from the provided dict. 
+        """
+
+        new_member = factory.make_member(member_data, user)
+        self._members[user.id] = new_member
 
     def __getitem__(self, __key: int) -> Member:
         return self._members[__key]

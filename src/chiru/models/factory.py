@@ -43,13 +43,18 @@ class StatefulObjectFactory:
         obb._chiru_set_client(self._client)
         return obb
 
-    def make_member(self, user_data: Mapping[str, Any]) -> Member:
+    def make_member(self, user_data: Mapping[str, Any], user: User | None = None) -> Member:
         """
         Creates a new stateful :class:`.Member` from a member body.
         """
 
         obb = CONVERTER.structure(user_data, Member)
-        assert obb.user is not None, "stateful member objects must have user data attached"
+        if obb.user is None:
+            if user is None:
+                raise ValueError("Expected some sort of user object")
+
+            obb.user = user
+
         obb.id = obb.user.id
 
         obb._chiru_set_client(self._client)

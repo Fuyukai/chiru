@@ -1,5 +1,6 @@
 import logging
 from collections.abc import Iterable
+from typing import Any
 
 import attr
 
@@ -193,4 +194,20 @@ class CachedEventParser:
         """
 
         message = factory.make_message(event.body)
+
+        # backfill member data from the message, in case we couldn't chunk.
+
+        if (guild := message.guild) is not None:
+            # we already constructed the member object in the message, it's a waste to do it twice,
+            # so just copy over the field data instead of making a stateful one.
+
+            mentions: list[dict[str, Any]] = event.body["mentions"]
+            for mention in mentions:
+                # kinda jank field. this is a user object with an additional "member" field.
+                mention_member = mention.pop("member")
+                mention_user = factory.make_user(mention)
+                guild.members._backfill_member_data(factory, mention_member, mention_user)
+            
+            guild.members._backfill_member_data(factory, event.body["member"], message.raw_author)
+
         yield MessageCreate(message=message)
