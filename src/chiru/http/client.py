@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from importlib.metadata import version
 from math import ceil
 from typing import Any, overload
@@ -14,6 +14,7 @@ from httpx import AsyncClient, Response
 from chiru.http.ratelimit import RatelimitManager
 from chiru.http.response import GatewayResponse
 from chiru.mentions import AllowedMentions, _AllowedMentions
+from chiru.models.embed import Embed
 from chiru.models.factory import StatefulObjectFactory
 from chiru.models.message import Message, RawMessage
 from chiru.models.oauth import OAuthApplication
@@ -181,8 +182,7 @@ class ChiruHttpClient:
                 response.raise_for_status()
                 return response
 
-        else:
-            raise RuntimeError("Failed to get a valid response after five tries.")
+        raise RuntimeError("Failed to get a valid response after five tries.")
 
     async def get_gateway_info(self) -> GatewayResponse:
         """
@@ -210,7 +210,8 @@ class ChiruHttpClient:
         self,
         *,
         channel_id: int,
-        content: str | None,
+        content: str | None = None,
+        embed: Embed | Iterable[Embed] | None = None,
         allowed_mentions: AllowedMentions | None = None,
     ) -> RawMessage: ...
 
@@ -219,7 +220,8 @@ class ChiruHttpClient:
         self,
         *,
         channel_id: int,
-        content: str | None,
+        content: str | None = None,
+        embed: Embed | Iterable[Embed] | None = None,
         allowed_mentions: AllowedMentions | None = None,
         factory: StatefulObjectFactory,
     ) -> Message: ...
@@ -229,6 +231,7 @@ class ChiruHttpClient:
         *,
         channel_id: int,
         content: str | None = None,
+        embed: Embed | Iterable[Embed] | None = None,
         allowed_mentions: AllowedMentions | None = None,
         factory: StatefulObjectFactory | None = None,
     ) -> RawMessage | Message:
@@ -237,7 +240,11 @@ class ChiruHttpClient:
 
         :param channel_id: The ID of the channel to send the message to.
         :param content: The textual content to send. Optional if this message contains an embed or
-            attachment.
+            an attachment(s).
+
+        :param embed: A :class:`.Embed` instance, or iterable of such instances, to send. Optional
+            if the message contains regular textual content or attachments.
+
         :param allowed_mentions: A :class:`.AllowedMentions` instance to control what this message
             is allowed to mention. For more information, see :ref:`allowed-mentions`.
 
@@ -246,7 +253,19 @@ class ChiruHttpClient:
             a :class:`.RawMessage` representing the created message object returned from Discord.
         """
 
-        body: dict[str, Any] = {"content": content}
+        body: dict[str, Any] = {}
+
+        if content is not None:
+            body["content"] = content
+
+        if embed is not None:
+            if isinstance(embed, Embed):
+                embed = [embed]
+
+            body["embeds"] = CONVERTER.unstructure(embed)
+
+        if not body:
+            raise ValueError("Expected one of content or embed to be passed!")
 
         if allowed_mentions is not None:
             assert isinstance(allowed_mentions, _AllowedMentions)

@@ -10,6 +10,7 @@ from cattrs import Converter
 from cattrs.gen import make_dict_structure_fn, override
 
 from chiru.models.base import DiscordObject, StatefulMixin
+from chiru.models.embed import Embed
 from chiru.models.member import Member, RawMember
 from chiru.models.user import RawUser, User
 
@@ -113,8 +114,12 @@ class RawMessage(DiscordObject):
     #: current member has changed their details since this message was sent.
     raw_member: RawMember | None = attr.ib(default=None)
 
-    #: The content of this message.
+    #: The textual content of this message. This may be empty in the case that a message has only
+    #: embeds or attachments.
     content: str = attr.ib()
+
+    #: The list of :class:`.Embed`s contained within this message.
+    embeds: list[Embed] = attr.ib(factory=list)
 
     #: The timestamp for this message.
     timestamp: arrow.Arrow = attr.ib()
@@ -135,13 +140,13 @@ class Message(RawMessage, StatefulMixin):
     @property
     def guild(self) -> Guild | None:
         """
-        Gets the guild that this message was sent in, if any. 
+        Gets the guild that this message was sent in, if any.
         """
 
         if self.guild_id is not None:
             return self._client.object_cache.get_available_guild(self.guild_id)
-        
-        if (guild := self.channel.guild):
+
+        if guild := self.channel.guild:
             self.guild_id = guild.id
             return guild
 

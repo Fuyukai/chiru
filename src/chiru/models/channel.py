@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import enum
+from collections.abc import Iterable
 from typing import TYPE_CHECKING
 
 import attr
@@ -9,6 +10,7 @@ from cattr import Converter
 
 from chiru.mentions import AllowedMentions
 from chiru.models.base import DiscordObject, StatefulMixin
+from chiru.models.embed import Embed
 from chiru.models.message import Message
 
 if TYPE_CHECKING:
@@ -65,12 +67,17 @@ class ChannelMessages:
     async def send(
         self,
         content: str | None = None,
+        embed: Embed | Iterable[Embed] | None = None,
         allowed_mentions: AllowedMentions | None = None,
     ) -> Message:
         """
         Sends a single message to this channel.
+        :param content: The textual content to send. Optional if this message contains an embed or
+            an attachment(s).
 
-        :param content: The raw textual content for this message.
+        :param embed: A :class:`.Embed` instance, or iterable of such instances, to send. Optional
+            if the message contains regular textual content or attachments.
+
         :param allowed_mentions: A :class:`.AllowedMentions` instance to control what this message
             is allowed to mention. For more information, see :ref:`allowed-mentions`.
         """
@@ -78,6 +85,7 @@ class ChannelMessages:
         return await self._channel._client.http.send_message(
             channel_id=self._channel.id,
             content=content,
+            embed=embed,
             allowed_mentions=allowed_mentions,
             factory=self._channel._client.stateful_factory,
         )

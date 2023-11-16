@@ -35,9 +35,10 @@ target-version = ["py311"]
 [tool.ruff]
 target-version = "py311"
 respect-gitignore = true
-fix = true
+# fix = true
 src = ["src/chiru"]
 line-length = 100
+show-source = true
 
 select = [
   "RUF", 
@@ -53,6 +54,7 @@ select = [
   "PYI", 
   "SIM", 
   "RET",
+  "PERF",
 ]
 ignore = [
     "W291",  # SHUT THE FUCK UP WHEN I'M TYPING COMMENTS
