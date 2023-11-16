@@ -30,7 +30,7 @@ class GuildChannelList(Mapping[int, Channel]):
 
         self._channels = channels or {}
 
-    @classmethod  # type: ignore[misc]
+    @classmethod
     def from_guild_packet(
         cls,
         packet: Mapping[str, Any],
@@ -68,7 +68,7 @@ class GuildMemberList(Mapping[int, Member]):
     def __init__(self, members: dict[int, Member]) -> None:
         self._members = members
 
-    @classmethod  # type: ignore
+    @classmethod
     def from_guild_packet(
         cls,
         packet: Mapping[str, Any],
@@ -128,7 +128,7 @@ class RawGuild(DiscordObject):
     A single raw guild object (or server, in more common nomenclature).
     """
 
-    @staticmethod  # type: ignore[misc]
+    @staticmethod
     def unmap_to_id(
         converter: Converter,
         data: Any,

@@ -13,7 +13,7 @@ from httpx import AsyncClient, Response
 
 from chiru.http.ratelimit import RatelimitManager
 from chiru.http.response import GatewayResponse
-from chiru.mentions import AllowedMentions, _AllowedMentions
+from chiru.mentions import AllowedMentions
 from chiru.models.embed import Embed
 from chiru.models.factory import StatefulObjectFactory
 from chiru.models.message import Message, RawMessage
@@ -268,8 +268,6 @@ class ChiruHttpClient:
             raise ValueError("Expected one of content or embed to be passed!")
 
         if allowed_mentions is not None:
-            assert isinstance(allowed_mentions, _AllowedMentions)
-
             body["allowed_mentions"] = allowed_mentions.to_dict()
 
         resp = await self.request(

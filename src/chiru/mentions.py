@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Protocol
 
 import attr
+from typing_extensions import override
 
 from chiru.models.base import DiscordObject
 
@@ -23,7 +24,13 @@ class AllowedMentions(Protocol):
     details.
     """
 
-    pass
+    def to_dict(self) -> dict[str, Any]:
+        """
+        Turns this set of allowed mentions into the dict format that Discord expects in the
+        HTTP API.
+        """
+
+        ...
 
 
 @attr.s(slots=True)
@@ -32,6 +39,7 @@ class _AllowedMentions(AllowedMentions):
     users: list[int] = attr.ib(factory=list)
     roles: list[int] = attr.ib(factory=list)
 
+    @override
     def to_dict(self) -> dict[str, Any]:
         body: dict[str, Any] = {}
 
