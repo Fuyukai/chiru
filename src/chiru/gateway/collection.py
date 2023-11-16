@@ -96,7 +96,7 @@ class GatewayCollection:
 
         await shard.write_channel.send(message)
 
-    async def drain_forever(self):
+    async def drain_forever(self) -> None:
         """
         Drains all events on the gateway channels forever.
         """

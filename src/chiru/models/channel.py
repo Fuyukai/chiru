@@ -139,7 +139,7 @@ class Channel(RawChannel, StatefulMixin):
 
     messages: ChannelMessages = attr.ib(init=False)
 
-    def __attrs_post_init__(self):
+    def __attrs_post_init__(self) -> None:
         self.messages = ChannelMessages(self)
 
     @property

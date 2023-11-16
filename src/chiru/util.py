@@ -6,7 +6,7 @@ from typing import Any, TypeVar
 
 import anyio
 from anyio import CancelScope, CapacityLimiter
-from anyio.abc import TaskGroup
+from anyio.abc import TaskGroup, TaskStatus
 
 ItemT = TypeVar("ItemT")
 
@@ -25,7 +25,7 @@ class CapacityLimitedNursery:
         Starts a new task. This will block until the capacity limiter has a token available.
         """
 
-        async def _inner(task_status):
+        async def _inner(task_status: TaskStatus[None]) -> None:
             async with self._limiter:
                 task_status.started()
                 await fn()
