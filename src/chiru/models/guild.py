@@ -20,15 +20,13 @@ DObjT = TypeVar("DObjT")
 
 
 @final
+@attr.s(slots=True)
 class GuildChannelList(Mapping[int, Channel]):
     """
     A more stateful container for the channels in a guild.
     """
 
-    def __init__(self, channels: dict[int, Channel] | None = None) -> None:
-        super().__init__()
-
-        self._channels = channels or {}
+    _channels: dict[int, Channel] = attr.ib(factory=dict)
 
     @classmethod
     def from_guild_packet(
@@ -60,13 +58,14 @@ class GuildChannelList(Mapping[int, Channel]):
         return len(self._channels)
 
 
+@final
+@attr.s(slots=True)
 class GuildMemberList(Mapping[int, Member]):
     """
     A more stateful container for the members in a guild.
     """
 
-    def __init__(self, members: dict[int, Member]) -> None:
-        self._members = members
+    _members: dict[int, Member] = attr.ib(factory=dict)
 
     @classmethod
     def from_guild_packet(
