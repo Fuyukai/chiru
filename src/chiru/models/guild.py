@@ -256,8 +256,8 @@ class Guild(RawGuild, StatefulMixin):
     of manual creation; it *must* go through a :class:`.ModelObjectFactory` to be created.
     """
 
-    #: If this guild is available or not. May be False if there is an outage.
-    unavailable: bool = attr.ib(default=True)
+    #: If this guild is unavailable or not. May be True if there is an outage.
+    unavailable: bool = attr.ib(default=False)
 
     #: The list of stateful channels that this guild contains.
     channels: GuildChannelList = attr.ib(init=False)
