@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import enum
 from functools import cached_property
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import arrow
 import attr
@@ -11,6 +11,7 @@ from cattrs.gen import make_dict_structure_fn, override
 
 from chiru.models.base import DiscordObject, StatefulMixin
 from chiru.models.embed import Embed
+from chiru.models.emoji import UnicodeEmoji
 from chiru.models.member import Member, RawMember
 from chiru.models.user import RawUser, User
 
@@ -77,11 +78,59 @@ class MessageType(enum.Enum):
     GUILD_APPLICATION_PREMIUM_SUBSCRIPTION = 32
 
 
-class MessageReaction:
+@attr.s(slots=True, kw_only=True)
+class ReactionCountDetails:
+    """
+    Detailed statistics for a single reaction to a message.
+    """
+
+    #: The counter for super reactions within this reaction.
+    burst: int = attr.ib()
+
+    #: The counter for normal reactions within this reaction.
+    normal: int = attr.ib()
+
+
+@attr.s(kw_only=True)
+class RawMessageReaction:
     """
     A single reaction for a message.
     """
 
+    @staticmethod
+    def decode_emoji_reference(data: Any, type: type[Any]) -> UnicodeEmoji | int:
+        if (id := data["id"]) is not None:
+            return id
+        
+        return UnicodeEmoji(data["name"])
+
+
+    @classmethod
+    def configure_converter(cls, converter: Converter) -> None:
+        converter.register_structure_hook(
+            cls, make_dict_structure_fn(
+                cls, converter, 
+                _cattrs_forbid_extra_keys=False,
+                emoji=override(struct_hook=RawMessageReaction.decode_emoji_reference)
+            )
+        )
+
+    #: The counter for this reaction, as seen alongside the emoji.
+    count: int = attr.ib()
+
+    #: The extra details for this reaction's counter, subdivided into the super reaction counter
+    #: and the regular reaction counter.
+    count_details: ReactionCountDetails = attr.ib()
+
+    #: If True, then the current user has used this reaction on a message.
+    me: bool = attr.ib()
+
+    #: If True, then the current user has used this reaction on a message as a super reaction.
+    me_burst: bool = attr.ib()
+
+    #: A reference to the emoji object that this reaction is for. This may either be the emoji ID
+    #: for custom emojis, or the unicode text for the emoji if it is not a custom emoji.
+    emoji: UnicodeEmoji | int = attr.ib()
 
 @attr.s(kw_only=True)
 class RawMessage(DiscordObject):
@@ -126,6 +175,9 @@ class RawMessage(DiscordObject):
 
     #: The list of :class:`.Embed`s contained within this message.
     embeds: list[Embed] = attr.ib(factory=list)
+
+    #: The list of :class:`.RawMessageReaction`s tto this message.
+    reactions: list[RawMessageReaction] = attr.ib(factory=list)
 
     #: The timestamp for this message.
     timestamp: arrow.Arrow = attr.ib()
