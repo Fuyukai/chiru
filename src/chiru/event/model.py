@@ -3,6 +3,7 @@ from typing import final
 import attr
 
 from chiru.models.channel import Channel
+from chiru.models.emoji import RawCustomEmoji
 from chiru.models.guild import Guild
 from chiru.models.member import Member
 from chiru.models.message import Message
@@ -128,6 +129,22 @@ class GuildMemberUpdate(DispatchedEvent):
 
     #: The member that was updated.
     member: Member = attr.ib()
+
+
+@attr.s(frozen=True, slots=True, kw_only=True)
+class GuildEmojiUpdate(DispatchedEvent):
+    """
+    Published when guilds have their emojis updated.
+    """
+
+    #: The guild that the emojis were updated for.
+    guild: Guild = attr.ib()
+
+    #: The list of emojis that the guild previously had.
+    previous_emojis: list[RawCustomEmoji] = attr.ib()
+
+    #: The new list of emojis that the guild now has.
+    new_emojis: list[RawCustomEmoji] = attr.ib()
 
 
 @final

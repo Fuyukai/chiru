@@ -15,7 +15,8 @@ from chiru.http.ratelimit import RatelimitManager
 from chiru.http.response import GatewayResponse
 from chiru.mentions import AllowedMentions
 from chiru.models.embed import Embed
-from chiru.models.factory import StatefulObjectFactory
+from chiru.models.emoji import RawCustomEmoji, RawCustomEmojiWithOwner
+from chiru.models.factory import ModelObjectFactory
 from chiru.models.message import Message, RawMessage
 from chiru.models.oauth import OAuthApplication
 from chiru.serialise import CONVERTER
@@ -42,6 +43,9 @@ class Endpoints:
 
     CHANNEL = API_BASE + "/channels/{channel_id}"
     CHANNEL_MESSAGES = CHANNEL + "/messages"
+
+    GUILD = API_BASE + "/guilds/{guild_id}"
+    GUILD_EMOJIS = GUILD + "/emojis"
 
     def __init__(self, base_url: str = "https://discord.com") -> None:
         self.base_url = base_url
@@ -223,7 +227,7 @@ class ChiruHttpClient:
         content: str | None = None,
         embed: Embed | Iterable[Embed] | None = None,
         allowed_mentions: AllowedMentions | None = None,
-        factory: StatefulObjectFactory,
+        factory: ModelObjectFactory,
     ) -> Message: ...
 
     async def send_message(
@@ -233,7 +237,7 @@ class ChiruHttpClient:
         content: str | None = None,
         embed: Embed | Iterable[Embed] | None = None,
         allowed_mentions: AllowedMentions | None = None,
-        factory: StatefulObjectFactory | None = None,
+        factory: ModelObjectFactory | None = None,
     ) -> RawMessage | Message:
         """
         Sends a single message to a channel.
@@ -249,7 +253,7 @@ class ChiruHttpClient:
             is allowed to mention. For more information, see :ref:`allowed-mentions`.
 
         :param factory: The object factory to create stateful message objects from.
-        :return: A :class:`.Message` if a :class:`.StatefulObjectFactory` was provided; otherwise,
+        :return: A :class:`.Message` if a :class:`.ModelObjectFactory` was provided; otherwise,
             a :class:`.RawMessage` representing the created message object returned from Discord.
         """
 
@@ -281,3 +285,31 @@ class ChiruHttpClient:
             return factory.make_message(resp.json())
 
         return CONVERTER.structure(resp.json(), RawMessage)
+
+    async def get_emojis_for(
+        self, *, guild_id: int
+    ) -> list[RawCustomEmoji] | list[RawCustomEmojiWithOwner]:
+        """
+        Gets the :class:`.RawCustomEmoji` for the provided guild.
+
+        :param guild_id: The guild snowflake ID to look up emojis from.
+
+        :return: Either a list of :class:`.RawCustomEmoji` or a list of
+            :class:`.RawCustomEmojiWithOwner`. See the documentation of
+            :class:`.RawCustomEmojiWithOwner` for more information on which class will be returned,
+            and why.
+        """
+
+        resp = await self.request(
+            bucket=f"emojis:{guild_id}",
+            method="GET",
+            path=Endpoints.GUILD_EMOJIS.format(guild_id=guild_id),
+        )
+
+        json: list[dict[str, Any]] = resp.json()
+
+        if not json:
+            return []
+
+        deserialise_klass = RawCustomEmojiWithOwner if "user" in json[0] else RawCustomEmoji
+        return [CONVERTER.structure(it, deserialise_klass) for it in json]

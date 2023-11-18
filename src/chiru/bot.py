@@ -9,7 +9,7 @@ from chiru.cache import ObjectCache
 from chiru.gateway.collection import GatewayCollection
 from chiru.http.client import ChiruHttpClient
 from chiru.http.response import GatewayResponse
-from chiru.models.factory import StatefulObjectFactory
+from chiru.models.factory import ModelObjectFactory
 from chiru.models.oauth import OAuthApplication
 
 
@@ -36,9 +36,9 @@ class ChiruBot:
         #: The :class:`.OAuthApplication` that this bot is running under.
         self.app: OAuthApplication = app
 
-        #: The :class:`.StatefulObjectFactory` that can be used to create :ref:`stateful objects`
+        #: The :class:`.ModelObjectFactory` that can be used to create :ref:`stateful objects`
         #: from raw response bodies.
-        self.stateful_factory: StatefulObjectFactory = StatefulObjectFactory(self)
+        self.stateful_factory: ModelObjectFactory = ModelObjectFactory(self)
 
         #: The cached gateway response created when the bot opened.
         self.cached_gateway_info: GatewayResponse = gw

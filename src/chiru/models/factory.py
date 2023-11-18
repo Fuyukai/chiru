@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from chiru.cache import ObjectCache
 from chiru.models.channel import Channel
 from chiru.models.guild import (
     Guild,
     GuildChannelList,
+    GuildEmojis,
     GuildMemberList,
     UnavailableGuild,
 )
@@ -20,16 +21,29 @@ if TYPE_CHECKING:
     from chiru.bot import ChiruBot
 
 
-class StatefulObjectFactory:
+_StructType = TypeVar("_StructType")
+
+
+class ModelObjectFactory:
     """
-    Produces stateful objects from raw JSON bodies. This requires a :class:`.ChiruBot` to be
-    provided which will be set on the stateful objects.
+    Produces both stateful and non-stateful objects from incoming data. This requires passing a
+    :class:`.ChiruBot` for applying to stateful classes.
+
+    This should be preferred over using the raw :class:`~.Converter` wherever possible to avoid
+    creating a tangle of circular imports.
     """
 
-    def __init__(self, client: ChiruBot):
+    def __init__(self, client: ChiruBot) -> None:
         self._client: ChiruBot = client
 
         self.object_cache: ObjectCache = ObjectCache()
+
+    def structure(self, data: Any, what: type[_StructType]) -> _StructType:
+        """
+        Deserialises the provided raw data into the provided type.
+        """
+
+        return CONVERTER.structure(data, what)
 
     def make_user(
         self,
@@ -43,12 +57,16 @@ class StatefulObjectFactory:
         obb._chiru_set_client(self._client)
         return obb
 
-    def make_member(self, user_data: Mapping[str, Any], user: User | None = None) -> Member:
+    def make_member(self, member_data: Mapping[str, Any], user: User | None = None) -> Member:
         """
         Creates a new stateful :class:`.Member` from a member body.
+
+        :param user_data: The raw member data to create objects from, as provided by Discord.
+        :param user: If the ``user`` property of ``member_data`` is None or non-existent then this
+            must be a :class:`.User` that will be set onto the member object.
         """
 
-        obb = CONVERTER.structure(user_data, Member)
+        obb = CONVERTER.structure(member_data, Member)
         if obb.user is None:
             if user is None:
                 raise ValueError("Expected some sort of user object")
@@ -98,9 +116,8 @@ class StatefulObjectFactory:
         base_guild = CONVERTER.structure(guild_data, Guild)
         base_guild._chiru_set_client(self._client)
 
-        channel_list = GuildChannelList.from_guild_packet(guild_data, self)
-        base_guild.channels = channel_list
-        member_list = GuildMemberList.from_guild_packet(guild_data, self)
-        base_guild.members = member_list
+        base_guild.channels = GuildChannelList.from_guild_packet(base_guild.id, guild_data, self)
+        base_guild.members = GuildMemberList.from_guild_packet(base_guild.id, guild_data, self)
+        base_guild.emojis = GuildEmojis.from_guild_packet(base_guild.id, guild_data, self)
 
         return base_guild

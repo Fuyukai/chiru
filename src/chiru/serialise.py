@@ -4,6 +4,7 @@ from cattrs.preconf.json import configure_converter
 
 from chiru.models.channel import RawChannel
 from chiru.models.embed import Embed
+from chiru.models.emoji import RawCustomEmoji
 from chiru.models.guild import RawGuild
 from chiru.models.member import RawMember
 from chiru.models.message import RawMessage
@@ -35,6 +36,7 @@ def create_chiru_converter() -> Converter:
     RawMember.configure_converter(converter)
     RawChannel.configure_converter(converter)
     RawGuild.configure_converter(converter)
+    RawCustomEmoji.configure_converter(converter)
     OAuthApplication.configure_converter(converter)
 
     return converter

@@ -10,6 +10,7 @@ from chiru.event.model import (
     Connected,
     DispatchedEvent,
     GuildAvailable,
+    GuildEmojiUpdate,
     GuildJoined,
     GuildMemberChunk,
     GuildMemberUpdate,
@@ -19,8 +20,8 @@ from chiru.event.model import (
     ShardReady,
 )
 from chiru.gateway.event import GatewayDispatch
-from chiru.models.factory import StatefulObjectFactory
-from chiru.models.guild import UnavailableGuild
+from chiru.models.factory import ModelObjectFactory
+from chiru.models.guild import GuildEmojis, UnavailableGuild
 
 logger = logging.getLogger(__name__)
 
@@ -65,12 +66,12 @@ class CachedEventParser:
         self.per_shard_state: list[PerShardState] = [PerShardState()] * shard_count
 
     def get_parsed_events(
-        self, factory: StatefulObjectFactory, event: GatewayDispatch
+        self, factory: ModelObjectFactory, event: GatewayDispatch
     ) -> list[DispatchedEvent]:
         """
         Gets a list of parsed events from the provided :class:`.GatewayDispatch` gateway event.
 
-        :param factory: The :class:`.StatefulObjectFactory` that cached objects will be stored into.
+        :param factory: The :class:`.ModelObjectFactory` that cached objects will be stored into.
         :param event: The :class:`.GatewayDispatch` event that high-level events will be parsed
             from.
         :return: A list of :class:`.DispatchedEvent` instances that this event produced, if any.
@@ -85,7 +86,7 @@ class CachedEventParser:
     def _parse_ready(
         self,
         event: GatewayDispatch,
-        factory: StatefulObjectFactory,
+        factory: ModelObjectFactory,
     ) -> Iterable[DispatchedEvent]:
         """
         Parses the READY event, which signals that a connection is open.
@@ -111,7 +112,7 @@ class CachedEventParser:
             yield Connected()
 
     def _parse_guild_create(
-        self, event: GatewayDispatch, factory: StatefulObjectFactory
+        self, event: GatewayDispatch, factory: ModelObjectFactory
     ) -> Iterable[DispatchedEvent]:
         """
         Parses a GUILD_CREATE event, either from guild streaming or from joining a new guild.
@@ -152,7 +153,7 @@ class CachedEventParser:
             self._chunker.handle_joined_guild(event.shard_id, created_guild)
 
     def _parse_guild_members_chunk(
-        self, event: GatewayDispatch, factory: StatefulObjectFactory
+        self, event: GatewayDispatch, factory: ModelObjectFactory
     ) -> Iterable[DispatchedEvent]:
         """
         Parses a single incoming member chunk.
@@ -188,7 +189,7 @@ class CachedEventParser:
 
     @staticmethod
     def _parse_message_create(
-        event: GatewayDispatch, factory: StatefulObjectFactory
+        event: GatewayDispatch, factory: ModelObjectFactory
     ) -> Iterable[DispatchedEvent]:
         """
         Parses a MESSAGE_CREATE event.
@@ -214,7 +215,7 @@ class CachedEventParser:
         yield MessageCreate(message=message)
 
     def _parse_guild_member_update(
-        self, event: GatewayDispatch, factory: StatefulObjectFactory
+        self, event: GatewayDispatch, factory: ModelObjectFactory
     ) -> Iterable[DispatchedEvent]:
         guild_id = int(event.body["guild_id"])
         guild = self._cache.get_available_guild(guild_id)
@@ -222,3 +223,18 @@ class CachedEventParser:
         assert guild, "received member update for an invalid guild!"
         created_member = guild.members._backfill_member_data(factory, event.body)
         yield GuildMemberUpdate(member=created_member)
+
+    def _parse_guild_emojis_update(
+        self, event: GatewayDispatch, factory: ModelObjectFactory
+    ) -> Iterable[DispatchedEvent]:
+        guild_id = int(event.body["guild_id"])
+        guild = self._cache.get_available_guild(guild_id)
+
+        assert guild, "received emoji update for an invalid guild!"
+        previous_emojis = list(guild.emojis.values())
+        new_emojis = GuildEmojis.from_update_packet(event.body["emojis"], factory)
+        guild.emojis = new_emojis
+
+        yield GuildEmojiUpdate(
+            guild=guild, previous_emojis=previous_emojis, new_emojis=list(new_emojis.values())
+        )

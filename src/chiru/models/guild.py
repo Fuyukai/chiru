@@ -10,11 +10,12 @@ from cattr import Converter, override
 
 from chiru.models.base import DiscordObject, StatefulMixin
 from chiru.models.channel import Channel, RawChannel
+from chiru.models.emoji import RawCustomEmoji
 from chiru.models.member import Member, RawMember
 from chiru.models.user import User
 
 if TYPE_CHECKING:
-    from chiru.models.factory import StatefulObjectFactory
+    from chiru.models.factory import ModelObjectFactory
 
 DObjT = TypeVar("DObjT")
 
@@ -31,14 +32,13 @@ class GuildChannelList(Mapping[int, Channel]):
     @classmethod
     def from_guild_packet(
         cls,
+        guild_id: int,
         packet: Mapping[str, Any],
-        factory: StatefulObjectFactory,
+        factory: ModelObjectFactory,
     ) -> GuildChannelList:
         """
         Creates a new channel list from a ``GUILD_CREATE`` packet.
         """
-
-        guild_id = int(packet["id"])
 
         channels: dict[int, Channel] = {}
         for data in packet.get("channels", []):
@@ -70,8 +70,9 @@ class GuildMemberList(Mapping[int, Member]):
     @classmethod
     def from_guild_packet(
         cls,
+        guild_id: int,
         packet: Mapping[str, Any],
-        factory: StatefulObjectFactory,
+        factory: ModelObjectFactory,
     ) -> GuildMemberList:
         """
         Creates a new member list from a ``GUILD_CREATE`` packet.
@@ -89,7 +90,7 @@ class GuildMemberList(Mapping[int, Member]):
 
     def _backfill_member_data(
         self,
-        factory: StatefulObjectFactory,
+        factory: ModelObjectFactory,
         member_data: Mapping[str, Any],
         user: User | None = None,
     ) -> Member:
@@ -109,6 +110,58 @@ class GuildMemberList(Mapping[int, Member]):
 
     def __len__(self) -> int:
         return len(self._members)
+
+
+@final
+@attr.s(slots=True)
+class GuildEmojis(Mapping[int, RawCustomEmoji]):
+    """
+    A stateful container for the emojis in a guild.
+    """
+
+    _emojis: dict[int, RawCustomEmoji] = attr.ib(factory=dict)
+
+    @classmethod
+    def from_update_packet(
+        cls,
+        body: list[Mapping[str, Any]],
+        factory: ModelObjectFactory,
+    ) -> GuildEmojis:
+        """
+        Creates the guild emoji wrapper from the provided ``GUILD_EMOJIS_UPDATE`` packet.
+        """
+
+        emojis: dict[int, RawCustomEmoji] = {}
+        for emoji_data in body:
+            emoji = factory.structure(emoji_data, RawCustomEmoji)
+            emojis[emoji.id] = emoji
+
+        return GuildEmojis(emojis)
+
+    @classmethod
+    def from_guild_packet(
+        cls,
+        guild_id: int,
+        body: Mapping[str, Any],
+        factory: ModelObjectFactory,
+    ) -> GuildEmojis:
+        """
+        Creates the guild emoji wrapper from the provided ``GUILD_CREATE`` packet.
+        """
+
+        return cls.from_update_packet(body["emojis"], factory)
+
+    def __getitem__(self, key: int) -> RawCustomEmoji:
+        return self._emojis[key]
+
+    def __iter__(self) -> Iterator[int]:
+        return iter(self._emojis)
+
+    def __len__(self) -> int:
+        return len(self._emojis)
+
+    def __repr__(self) -> str:
+        return repr(self._emojis)
 
 
 @attr.s(slots=True, kw_only=True)
@@ -148,6 +201,7 @@ class RawGuild(DiscordObject):
     def configure_converter(cls, converter: Converter) -> None:
         raw_channel_fn = override(struct_hook=partial(cls.unmap_to_id, converter))
         raw_member_fn = override(struct_hook=partial(cls.unmap_to_id, converter))
+        raw_emoji_fn = override(struct_hook=partial(cls.unmap_to_id, converter))
 
         converter.register_structure_hook(
             RawGuild,
@@ -156,6 +210,7 @@ class RawGuild(DiscordObject):
                 converter,
                 channels=raw_channel_fn,
                 members=raw_member_fn,
+                emojis=raw_emoji_fn,
                 _cattrs_forbid_extra_keys=False,
             ),
         )
@@ -178,11 +233,14 @@ class RawGuild(DiscordObject):
     #: If this guild is unavailable or not. Always False.
     unavailable: bool = attr.ib(default=False)
 
-    #: The mapping of channels that this guild contains.
+    #: The mapping of :class:`.RawChannel` instances that this guild contains.
     channels: Mapping[int, RawChannel] = attr.ib(factory=dict)
 
-    #: The mapping of members that this guild contains.
+    #: The mapping of :class:`.RawMember` instances that this guild contains.
     members: Mapping[int, RawMember] = attr.ib(factory=dict)
+
+    #: The mapping of :class:`.RawCustomEmoji` instances that this guild contains.
+    emojis: Mapping[int, RawCustomEmoji] = attr.ib(factory=dict)
 
     #: If this guild is a large guild, i.e. needs member chunking. Always False on the HTTP API.
     large: bool = attr.ib(default=False)
@@ -195,7 +253,7 @@ class RawGuild(DiscordObject):
 class Guild(RawGuild, StatefulMixin):
     """
     Stateful version of :class:`.RawGuild`. Please note that this object does not support any form
-    of manual creation; it *must* go through a :class:`.StatefulObjectFactory` to be created.
+    of manual creation; it *must* go through a :class:`.ModelObjectFactory` to be created.
     """
 
     #: If this guild is available or not. May be False if there is an outage.
@@ -206,3 +264,8 @@ class Guild(RawGuild, StatefulMixin):
 
     #: The list of stateful members that this guild contains.
     members: GuildMemberList = attr.ib(init=False)
+
+    #: The list of :class:`.RawCustomEmoji`s that this guild contains. These emojis will not
+    #: contain ownership information; see :meth:`.ChiruHttpClient.get_emojis` for retrieving
+    #: emoji with ownership information.
+    emojis: GuildEmojis = attr.ib(init=False)

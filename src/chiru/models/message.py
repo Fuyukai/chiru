@@ -77,6 +77,12 @@ class MessageType(enum.Enum):
     GUILD_APPLICATION_PREMIUM_SUBSCRIPTION = 32
 
 
+class MessageReaction:
+    """
+    A single reaction for a message.
+    """
+
+
 @attr.s(kw_only=True)
 class RawMessage(DiscordObject):
     """
