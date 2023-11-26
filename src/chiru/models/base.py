@@ -14,7 +14,7 @@ else:
 DISCORD_EPOCH = 1420070400000
 
 
-@attr.s(kw_only=True)
+@attr.s(kw_only=True, hash=False, eq=False)
 class DiscordObject:
     """
     Base class for all objects that have a Snowflake-based ID.
@@ -34,6 +34,14 @@ class DiscordObject:
         ts = ((int(self.id) >> 22) + DISCORD_EPOCH) / 1000
         return arrow.get(ts)
 
+    def __hash__(self) -> int:
+        return hash(self.id)
+    
+    def __eq__(self, __value: object) -> bool:
+        if not isinstance(__value, DiscordObject):
+            return NotImplemented
+        
+        return id == __value.id
 
 @attr.s(kw_only=True)
 class StatefulMixin:
