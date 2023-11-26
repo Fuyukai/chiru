@@ -8,7 +8,7 @@ import anyio
 from anyio import CancelScope
 from anyio.abc import TaskGroup
 
-logger = logging.getLogger(__name__)
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class RatelimitManager:

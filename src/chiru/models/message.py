@@ -207,7 +207,7 @@ class Message(RawMessage, StatefulMixin):
             return self._client.object_cache.get_available_guild(self.guild_id)
 
         if guild := self.channel.guild:
-            self.guild_id = guild.id
+            self.guild_id: int = guild.id
             return guild
 
         return None

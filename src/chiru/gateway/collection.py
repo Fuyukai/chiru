@@ -15,7 +15,7 @@ from chiru.gateway.event import (
     OutgoingGatewayEvent,
 )
 
-logger = logging.getLogger(__name__)
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 @attr.s()

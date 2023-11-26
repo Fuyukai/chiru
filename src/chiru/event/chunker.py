@@ -32,7 +32,7 @@ from chiru.util import cancel_on_close
 # the secondary source, and not block the entire bot on guild member chunking.
 
 
-logger = logging.getLogger(__name__)
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 @final

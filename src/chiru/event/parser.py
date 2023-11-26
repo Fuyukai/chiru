@@ -23,7 +23,7 @@ from chiru.gateway.event import GatewayDispatch
 from chiru.models.factory import ModelObjectFactory
 from chiru.models.guild import GuildEmojis, UnavailableGuild
 
-logger = logging.getLogger(__name__)
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 @attr.s(slots=True)
