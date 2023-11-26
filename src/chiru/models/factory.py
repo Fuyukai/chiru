@@ -76,6 +76,7 @@ class ModelObjectFactory:
         obb.id = obb.user.id
 
         obb._chiru_set_client(self._client)
+        obb.user._chiru_set_client(self._client)
         return obb
 
     def make_message(self, message_data: Mapping[str, Any]) -> Message:
