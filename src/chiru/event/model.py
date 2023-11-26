@@ -7,6 +7,7 @@ from chiru.models.emoji import RawCustomEmoji
 from chiru.models.guild import Guild
 from chiru.models.member import Member
 from chiru.models.message import Message
+from chiru.models.user import User
 
 __all__ = (
     "DispatchedEvent",
@@ -121,6 +122,38 @@ class GuildMemberChunk(DispatchedEvent):
     nonce: str | None = attr.ib(default=None)
 
 
+@final
+@attr.s(slots=True, frozen=True, kw_only=True)
+class GuildMemberAdd(DispatchedEvent):
+    """
+    Published when a new member joins a guild.
+    """
+
+    #: The guild that this member joined.
+    guild: Guild = attr.ib()
+
+    #: The new member that just joined.
+    member: Member = attr.ib()
+
+
+@final
+@attr.s(slots=True, frozen=True, kw_only=True)
+class GuildMemberRemove(DispatchedEvent):
+    """
+    Published when a user is removed from a guild.
+    """
+
+    #: The ID of the guild that this user was removed from.
+    guild_id: int = attr.ib()
+
+    #: The user data for the user that was just removed.
+    user: User = attr.ib()
+
+    #: The guild object that the user was removed from, if it is available.
+    guild: Guild | None = attr.ib()
+
+
+@final
 @attr.s(frozen=True, slots=True, kw_only=True)
 class GuildMemberUpdate(DispatchedEvent):
     """

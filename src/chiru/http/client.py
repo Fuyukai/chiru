@@ -28,7 +28,7 @@ from chiru.serialise import CONVERTER
 # curious...)
 
 
-logger = logging.getLogger(__name__)
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class Endpoints:
@@ -46,6 +46,8 @@ class Endpoints:
 
     GUILD = API_BASE + "/guilds/{guild_id}"
     GUILD_EMOJIS = GUILD + "/emojis"
+
+    GUILD_MEMBER = GUILD + "/members/{member_id}"
 
     def __init__(self, base_url: str = "https://discord.com") -> None:
         self.base_url = base_url
@@ -313,3 +315,19 @@ class ChiruHttpClient:
 
         deserialise_klass = RawCustomEmojiWithOwner if "user" in json[0] else RawCustomEmoji
         return [CONVERTER.structure(it, deserialise_klass) for it in json]
+
+    async def kick(self, *, guild_id: int, member_id: int, reason: str | None = None) -> None:
+        """
+        Kicks a member from a guild.
+
+        :param guild_id: The guild ID of the guild the member is in.
+        :param member_id: The member ID to be kicked.
+        :param reason: An optional audit log reason.
+        """
+
+        await self.request(
+            bucket=f"members:{guild_id}",
+            method="DELETE",
+            path=Endpoints.GUILD_MEMBER.format(guild_id=guild_id, member_id=member_id),
+            reason=reason,
+        )

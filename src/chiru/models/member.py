@@ -77,3 +77,10 @@ class Member(DiscordObject, RawMember, StatefulMixin):
         guild = self._client.object_cache.get_available_guild(self.guild_id)
         assert guild, f"Somehow got a member for a non-existent guild {self.guild_id}"
         return guild
+
+    async def kick(self, *, reason: str | None = None) -> None:
+        """
+        Kicks this member from the guild.
+        """
+
+        await self._client.http.kick(guild_id=self.guild_id, member_id=self.id, reason=reason)

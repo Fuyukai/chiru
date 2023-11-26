@@ -59,13 +59,14 @@ class GuildChannelList(Mapping[int, Channel]):
 
 
 @final
-@attr.s(slots=True)
+@attr.s(slots=True, kw_only=True)
 class GuildMemberList(Mapping[int, Member]):
     """
     A more stateful container for the members in a guild.
     """
 
-    _members: dict[int, Member] = attr.ib(factory=dict)
+    _members: dict[int, Member] = attr.ib(factory=dict, alias="members")
+    _guild_id: int = attr.ib(alias="guild_id")
 
     @classmethod
     def from_guild_packet(
@@ -86,7 +87,7 @@ class GuildMemberList(Mapping[int, Member]):
             created_member.guild_id = guild_id
             members[created_member.id] = created_member
 
-        return GuildMemberList(members)
+        return GuildMemberList(members=members, guild_id=guild_id)
 
     def _backfill_member_data(
         self,
@@ -99,6 +100,7 @@ class GuildMemberList(Mapping[int, Member]):
         """
 
         new_member = factory.make_member(member_data, user)
+        new_member.guild_id = self._guild_id
         self._members[new_member.id] = new_member
         return new_member
 
