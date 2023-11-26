@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import enum
 from functools import cached_property
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import arrow
 import attr
@@ -100,19 +100,20 @@ class RawMessageReaction:
     @staticmethod
     def decode_emoji_reference(data: Any, type: type[Any]) -> UnicodeEmoji | int:
         if (id := data["id"]) is not None:
-            return id
-        
-        return UnicodeEmoji(data["name"])
+            return cast(int, id)
 
+        return UnicodeEmoji(data["name"])
 
     @classmethod
     def configure_converter(cls, converter: Converter) -> None:
         converter.register_structure_hook(
-            cls, make_dict_structure_fn(
-                cls, converter, 
+            cls,
+            make_dict_structure_fn(
+                cls,
+                converter,
                 _cattrs_forbid_extra_keys=False,
-                emoji=override(struct_hook=RawMessageReaction.decode_emoji_reference)
-            )
+                emoji=override(struct_hook=RawMessageReaction.decode_emoji_reference),
+            ),
         )
 
     #: The counter for this reaction, as seen alongside the emoji.
@@ -131,6 +132,7 @@ class RawMessageReaction:
     #: A reference to the emoji object that this reaction is for. This may either be the emoji ID
     #: for custom emojis, or the unicode text for the emoji if it is not a custom emoji.
     emoji: UnicodeEmoji | int = attr.ib()
+
 
 @attr.s(kw_only=True)
 class RawMessage(DiscordObject):
