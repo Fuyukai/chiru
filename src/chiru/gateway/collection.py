@@ -1,10 +1,10 @@
-import logging
 from collections.abc import AsyncIterator
 from functools import partial
 from typing import NoReturn
 
 import anyio
 import attr
+import structlog
 from anyio import CancelScope
 from anyio.abc import TaskGroup
 from anyio.streams.memory import MemoryObjectSendStream
@@ -15,7 +15,7 @@ from chiru.gateway.event import (
     OutgoingGatewayEvent,
 )
 
-logger: logging.Logger = logging.getLogger(__name__)
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(name=__name__)
 
 
 @attr.s()
@@ -73,7 +73,7 @@ class GatewayCollection:
                     inbound_channel=event_channel,
                 )
             finally:
-                logger.debug(f"Terminated gateway connection for shard {shard_id}")
+                logger.debug("Terminated gateway connection", shard_id=shard_id)
                 outbound_read.close()
                 outbound_write.close()
                 self._gateway_ctl_channels[shard_id] = None

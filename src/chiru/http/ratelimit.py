@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 import anyio
+import structlog
 from anyio import CancelScope
 from anyio.abc import TaskGroup
 
-logger: logging.Logger = logging.getLogger(__name__)
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(name=__name__)
 
 
 class RatelimitManager:
@@ -21,7 +21,7 @@ class RatelimitManager:
         self._nursery = nursery
 
     def _task_got_too_lonely(self, bucket: tuple[str, str]) -> None:
-        logger.debug(f"Discarding ratelimit for bucket {bucket} due to timeout")
+        logger.debug("Discarding ratelimit", bucket=bucket)
 
         rl = self._ratelimits.pop(bucket, None)
 
@@ -94,14 +94,18 @@ class Ratelimit:
                 # run this repeatedly so that if discord changes their mind about the ratelimit, we
                 # don't wake up early.
                 while self._wakeup_time >= anyio.current_time():
-                    logger.info(f"Ratelimit {self._bucket} will reset at {self._wakeup_time}")
+                    logger.debug(
+                        "Ratelimit reset sleeping",
+                        bucket=self._bucket,
+                        reset_time=self._wakeup_time,
+                    )
                     await anyio.sleep_until(self._wakeup_time)
 
                 # refill the semaphore to max.
                 to_refill = (
                     self._max_count - self._semaphore.value - self._requests_still_processing
                 )
-                logger.info(f"Resetting {to_refill} tokens for {self._bucket}")
+                logger.debug("Ratelimit reset", bucket=self._bucket, tokens=to_refill)
                 for _ in range(0, to_refill):
                     self._semaphore.release()
 

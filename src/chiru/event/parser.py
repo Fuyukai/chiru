@@ -1,8 +1,8 @@
-import logging
 from collections.abc import Iterable
 from typing import Any
 
 import attr
+import structlog
 
 from chiru.cache import ObjectCache
 from chiru.event.chunker import GuildChunker
@@ -25,7 +25,7 @@ from chiru.gateway.event import GatewayDispatch
 from chiru.models.factory import ModelObjectFactory
 from chiru.models.guild import GuildEmojis, UnavailableGuild
 
-logger: logging.Logger = logging.getLogger(__name__)
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(name=__name__)
 
 
 @attr.s(slots=True)
@@ -169,7 +169,7 @@ class CachedEventParser:
 
         guild = factory.object_cache.get_available_guild(guild_id)
         if guild is None:
-            logger.warning(f"Was sent member chunk for invalid guild {guild_id}, ignoring?")
+            logger.warning("Sent member chunk for invalid guild", guild_id=guild_id)
             return
 
         members = [factory.make_member(m) for m in event.body["members"]]

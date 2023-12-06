@@ -36,12 +36,13 @@ class DiscordObject:
 
     def __hash__(self) -> int:
         return hash(self.id)
-    
+
     def __eq__(self, __value: object) -> bool:
         if not isinstance(__value, DiscordObject):
             return NotImplemented
-        
+
         return id == __value.id
+
 
 @attr.s(kw_only=True)
 class StatefulMixin:

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from collections.abc import Iterable, Mapping
 from importlib.metadata import version
 from math import ceil
@@ -8,6 +7,7 @@ from typing import Any, overload
 
 import anyio
 import httpx
+import structlog
 from anyio.abc import TaskGroup
 from httpx import AsyncClient, Response
 
@@ -28,7 +28,7 @@ from chiru.serialise import CONVERTER
 # curious...)
 
 
-logger: logging.Logger = logging.getLogger(__name__)
+logger: structlog.stdlib.BoundLogger = structlog.getLogger(name=__name__)
 
 
 class Endpoints:
@@ -136,7 +136,7 @@ class ChiruHttpClient:
         for tries in range(0, 5):
             rl = self._ratelimiter.get_ratelimit_for_bucket((method, bucket))
             async with rl.acquire_ratelimit_token():
-                logger.debug(f"{method} {path} => (pending) (try {tries + 1})")
+                logger.debug("HTTP request pending", method=method, path=path, attempt=tries + 1)
 
                 try:
                     req = self._http.build_request(
@@ -148,13 +148,31 @@ class ChiruHttpClient:
 
                     response = await self._http.send(req)
                 except OSError as e:
-                    logger.debug(f"{method} {path} => (failed) (try {tries + 1})", exc_info=e)
+                    logger.warning(
+                        "HTTP request failed",
+                        exc_info=e,
+                        method=method,
+                        path=path,
+                        attempt=tries + 1,
+                    )
                     continue
                 except httpx.RequestError as e:
-                    logger.debug(f"{method} {path} => (failed) (try {tries + 1})", exc_info=e)
+                    logger.warning(
+                        "HTTP request failed",
+                        exc_info=e,
+                        method=method,
+                        path=path,
+                        attempt=tries + 1,
+                    )
                     continue
 
-                logger.debug(f"{method} {path} => {response.status_code} (try {tries + 1})")
+                logger.debug(
+                    "HTTP request completed",
+                    method=method,
+                    path=path,
+                    attempt=tries + 1,
+                    status=response.status_code,
+                )
 
                 # Back in 2016, Discord would return 502s constantly on random requests.
                 # I don't know if this is still the case in 2023, but I see no reason not to keep
@@ -163,7 +181,10 @@ class ChiruHttpClient:
                 if 500 <= response.status_code <= 504:
                     sleep_time = 2 ** (tries + 1)
                     logger.warning(
-                        f"Server-side error when requesting {path}, waiting for {sleep_time}s"
+                        "Server-side error during HTTP request",
+                        path=path,
+                        method=method,
+                        sleep_time=sleep_time,
                     )
                     await anyio.sleep(sleep_time)
                     continue

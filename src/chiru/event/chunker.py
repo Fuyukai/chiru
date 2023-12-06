@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 import math
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
@@ -8,7 +7,9 @@ from functools import partial
 from typing import NoReturn, final
 
 import anyio
+import structlog
 from anyio import Event, create_task_group
+from structlog.stdlib import BoundLogger
 
 from chiru.event.model import GuildMemberChunk
 from chiru.gateway.collection import GatewayCollection
@@ -32,7 +33,7 @@ from chiru.util import cancel_on_close
 # the secondary source, and not block the entire bot on guild member chunking.
 
 
-logger: logging.Logger = logging.getLogger(__name__)
+logger: BoundLogger = structlog.get_logger(name=__name__)
 
 
 @final
@@ -78,10 +79,15 @@ class GuildChunker:
         # the parser is responsible for actually loading all of the members...
         # this mostly just tracks guilds that are fully chunked
 
-        logger.debug(f"Received chunk {evt.chunk_index + 1} / {evt.chunk_count} for {evt.guild.id}")
+        logger.debug(
+            "Received member chunk",
+            chunk_index=evt.chunk_index,
+            chunk_count=evt.chunk_count,
+            guild_id=evt.guild.id,
+        )
 
         if evt.chunk_index + 1 >= evt.chunk_count:
-            logger.debug(f"Guild {evt.guild.id} is fully chunked!")
+            logger.debug("Fully chunked", guild_id=evt.guild.id)
             self._guild_fully_chunked[evt.guild.id].set()
 
     def handle_joined_guild(
@@ -98,13 +104,12 @@ class GuildChunker:
 
         self._guild_fully_chunked[guild.id] = Event()
 
+        logger.debug("Joined guild", guild=guild.id, large=guild.large)
+
         # non-large guilds never need chunking, so set their event immediately
         if not guild.large:
-            logger.debug(f"Guild {guild.id} is not large, skipping chunk request")
             self._guild_fully_chunked[guild.id].set()
             return
-
-        logger.debug(f"Guild {guild.id} is large, sending a member chunk request")
 
         evt = GatewayMemberChunkRequest(guild_id=guild.id, query="", limit=0, presences=False)
         self._pending_chunk_write.send_nowait((shard_id, evt))

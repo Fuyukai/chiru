@@ -1,4 +1,3 @@
-import logging
 from collections import defaultdict
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
@@ -8,6 +7,7 @@ from typing import Any, NoReturn, TypeVar, final, overload
 import anyio
 import attr
 import bitarray
+import structlog
 
 from chiru.bot import ChiruBot
 from chiru.event.chunker import GuildChunker
@@ -22,7 +22,7 @@ DsEventT = TypeVar("DsEventT", bound=DispatchedEvent)
 # roughly equiv to state.py in curious.
 # TODO: split out the actual event dispatching and the actual event parsing, maybe?
 
-logger: logging.Logger = logging.getLogger(__name__)
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(name=__name__)
 
 
 @final
@@ -91,9 +91,9 @@ class StatefulEventDispatcher:
         """
 
         if ctx is not None:
-            logger.debug(f"Dispatching event '{event_klass.__name__}' from shard {ctx.shard_id}")
+            logger.debug("Dispatching event", event_type=event_klass.__name__, shard=ctx.shard_id)
         else:
-            logger.debug(msg=f"Dispatching event '{event_klass.__name__}'")
+            logger.debug("Dispatching event", event_type=event_klass.__name__)
 
         if ctx:
             fns = [
@@ -143,7 +143,7 @@ class StatefulEventDispatcher:
             a union type.)
         """
 
-        logger.debug(f"Registered event callable {handler} handling type '{event}'")
+        logger.info("Registered event", handler=handler.__name__, event_type=event.__name__)
 
         self._events[event].append(handler)
 
