@@ -586,4 +586,7 @@ async def run_gateway_loop(
                         shared_state.logger.warn("Unexpected close", code=e.code, reason=e.reason)
             finally:
                 # kill both the pumping tasks, close the websocket, and retry.
+                with anyio.move_on_after(5, shield=True):
+                    await ws.close(code=1001)
+
                 nursery.cancel_scope.cancel()

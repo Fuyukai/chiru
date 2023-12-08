@@ -72,10 +72,7 @@ class ChiruBot:
             for shard in range(0, self.cached_gateway_info.shards):
                 wrapper._start_shard(shard)
 
-            try:
-                yield wrapper
-            finally:
-                nursery.cancel_scope.cancel()
+            yield wrapper
 
 
 @asynccontextmanager
@@ -96,7 +93,4 @@ async def open_bot(
         app = await http.get_current_application_info()
         gateway = await http.get_gateway_info()
 
-        try:
-            yield ChiruBot(http=http, app=app, token=token, gw=gateway)
-        finally:
-            http_nursery.cancel_scope.cancel()
+        yield ChiruBot(http=http, app=app, token=token, gw=gateway)

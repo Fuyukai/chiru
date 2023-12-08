@@ -157,7 +157,7 @@ class StatefulEventDispatcher:
 
         async with (
             self.client.start_receiving_events() as stream,
-            cancel_on_close(anyio.create_task_group()) as group,
+            anyio.create_task_group() as group,
         ):
             if enable_chunking:
                 group.start_soon(partial(self.chunker.send_to_outgoing, collection=stream))
@@ -202,7 +202,4 @@ async def create_stateful_dispatcher(
     """
 
     async with open_limiting_nursery(max_tasks=max_tasks) as n:
-        try:
-            yield StatefulEventDispatcher(bot, n)
-        finally:
-            n.cancel_scope.cancel()
+        yield StatefulEventDispatcher(bot, n)
