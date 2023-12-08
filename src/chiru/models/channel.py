@@ -77,7 +77,7 @@ class RawChannel(DiscordObject):
             converter.register_structure_hook(
                 klass,
                 cattr.gen.make_dict_structure_fn(
-                    klass,
+                    klass,  # type: ignore, wtf mypy?
                     converter,
                     _cattrs_forbid_extra_keys=False,
                 ),
