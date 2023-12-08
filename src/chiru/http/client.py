@@ -43,6 +43,7 @@ class Endpoints:
 
     CHANNEL = API_BASE + "/channels/{channel_id}"
     CHANNEL_MESSAGES = CHANNEL + "/messages"
+    CHANNEL_INDIVIDUAL_MESSAGE = CHANNEL_MESSAGES + "/{message_id}"
 
     GUILD = API_BASE + "/guilds/{guild_id}"
     GUILD_EMOJIS = GUILD + "/emojis"
@@ -82,12 +83,10 @@ class ChiruHttpClient:
             package_version = version("chiru")
             user_agent = f"DiscordBot (https://github.com/Fuyukai/chiru, {package_version})"
 
-        self._http.headers.update(
-            {
-                "Authorization": f"Bot {token}",
-                "User-Agent": user_agent,
-            }
-        )
+        self._http.headers.update({
+            "Authorization": f"Bot {token}",
+            "User-Agent": user_agent,
+        })
 
         # mypy doesn't like these.
         self._http.base_url = self.endpoints.base_url  # type: ignore
@@ -308,6 +307,22 @@ class ChiruHttpClient:
             return factory.make_message(resp.json())
 
         return CONVERTER.structure(resp.json(), RawMessage)
+
+    async def delete_message(self, *, channel_id: int, message_id: int) -> None:
+        """
+        Deletes a single message from a channel.
+
+        :param channel_id: The ID of the channel that the message is within.
+        :param message_id: The ID of the message to delete.
+        """
+
+        await self.request(
+            bucket=f"delete-message:{channel_id}",
+            method="DELETE",
+            path=Endpoints.CHANNEL_INDIVIDUAL_MESSAGE.format(
+                channel_id=channel_id, message_id=message_id
+            ),
+        )
 
     async def get_emojis_for(
         self, *, guild_id: int

@@ -43,7 +43,7 @@ class CapacityLimitedNursery:
 
 @asynccontextmanager
 async def open_limiting_nursery(
-    max_tasks: int = 16
+    max_tasks: int = 16,
 ) -> AsyncGenerator[CapacityLimitedNursery, None]:
     """
     Opens a capacity limiting nursery.

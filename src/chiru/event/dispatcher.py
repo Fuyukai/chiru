@@ -14,7 +14,7 @@ from chiru.event.chunker import GuildChunker
 from chiru.event.model import DispatchedEvent, Ready, ShardReady
 from chiru.event.parser import CachedEventParser
 from chiru.gateway.event import GatewayDispatch, IncomingGatewayEvent
-from chiru.util import CapacityLimitedNursery, cancel_on_close, open_limiting_nursery
+from chiru.util import CapacityLimitedNursery, open_limiting_nursery
 
 GwEventT = TypeVar("GwEventT", bound=IncomingGatewayEvent)
 DsEventT = TypeVar("DsEventT", bound=DispatchedEvent)

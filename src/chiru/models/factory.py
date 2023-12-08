@@ -86,7 +86,10 @@ class ModelObjectFactory:
         obb.user._chiru_set_client(self._client)
         return obb
 
-    def make_message(self, message_data: Mapping[str, Any]) -> Message:
+    def make_message(
+        self,
+        message_data: Mapping[str, Any],
+    ) -> Message:
         """
         Creates a new stateful :class:`.Message` from a message body. This will also create
         stateful :class:`.User` instances for :attr:`.Message.author`.

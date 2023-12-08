@@ -256,3 +256,11 @@ class Message(RawMessage, StatefulMixin):
             return self.raw_author
 
         return member
+
+    async def delete(self) -> None:
+        """
+        Deletes this individual message from the channel.
+        """
+
+        # TODO: local permissions check
+        await self._client.http.delete_message(channel_id=self.channel_id, message_id=self.id)
