@@ -96,7 +96,7 @@ class RawChannel(DiscordObject):
     position: int = attr.ib(default=0)
 
     #: The topic for this channel, if any.
-    topic: str = attr.ib(default=None)
+    topic: str | None = attr.ib(default=None)
 
     #: The parent for this channel, if any.
     parent_id: int | None = attr.ib(default=None)
