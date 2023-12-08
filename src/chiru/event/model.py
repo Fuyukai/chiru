@@ -2,7 +2,7 @@ from typing import final
 
 import attr
 
-from chiru.models.channel import Channel
+from chiru.models.channel import TextualChannel
 from chiru.models.emoji import RawCustomEmoji
 from chiru.models.guild import Guild
 from chiru.models.member import Member
@@ -191,7 +191,7 @@ class MessageCreate(DispatchedEvent):
     message: Message = attr.ib()
 
     @property
-    def channel(self) -> Channel:
+    def channel(self) -> TextualChannel:
         """
         Gets the channel that this message was created in.
         """

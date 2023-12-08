@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, cast
 import attr
 
 if TYPE_CHECKING:
-    from chiru.models.channel import Channel
+    from chiru.models.channel import BaseChannel
     from chiru.models.guild import Guild, UnavailableGuild
 else:
     Guild = None
@@ -18,7 +18,7 @@ class ObjectCache:
     """
 
     guilds: dict[int, UnavailableGuild | Guild] = attr.ib(factory=dict)
-    dm_channels: dict[int, Channel] = attr.ib(factory=dict)
+    dm_channels: dict[int, BaseChannel] = attr.ib(factory=dict)
 
     def get_available_guild(self, guild_id: int) -> Guild | None:
         """
@@ -32,7 +32,7 @@ class ObjectCache:
 
         return None
 
-    def find_channel(self, channel_id: int) -> Channel | None:
+    def find_channel(self, channel_id: int) -> BaseChannel | None:
         """
         Looks up a channel in the cache.
         """

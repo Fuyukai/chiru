@@ -10,13 +10,13 @@ from cattrs import Converter
 from cattrs.gen import make_dict_structure_fn, override
 
 from chiru.models.base import DiscordObject, StatefulMixin
+from chiru.models.channel import AnyGuildChannel, TextualChannel
 from chiru.models.embed import Embed
 from chiru.models.emoji import UnicodeEmoji
 from chiru.models.member import Member, RawMember
 from chiru.models.user import RawUser, User
 
 if TYPE_CHECKING:
-    from chiru.models.channel import Channel
     from chiru.models.guild import Guild
 
 
@@ -210,14 +210,14 @@ class Message(RawMessage, StatefulMixin):
         if self.guild_id is not None:
             return self._client.object_cache.get_available_guild(self.guild_id)
 
-        if guild := self.channel.guild:
-            self.guild_id: int = guild.id
-            return guild
+        if isinstance(self.channel, AnyGuildChannel):
+            self.guild_id: int = self.channel.guild_id
+            return self.channel.guild
 
         return None
 
     @cached_property
-    def channel(self) -> Channel:
+    def channel(self) -> TextualChannel:
         """
         Gets the channel that this message is for.
         """
@@ -225,10 +225,10 @@ class Message(RawMessage, StatefulMixin):
         if self.guild_id:
             guild = self._client.object_cache.get_available_guild(self.guild_id)
             if guild is not None:
-                return guild.channels[self.channel_id]
+                return cast(TextualChannel, guild.channels[self.channel_id])
 
         if channel := self._client.object_cache.find_channel(self.channel_id):
-            return channel
+            return cast(TextualChannel, channel)
 
         raise RuntimeError(f"Couldn't find channel {self.channel_id}")
 
@@ -245,10 +245,11 @@ class Message(RawMessage, StatefulMixin):
         if not self.channel.guild_id:
             return self.raw_author
 
-        guild = self.channel.guild
-        if not guild:
-            raise NotImplementedError("DM channel authors")
+        assert isinstance(
+            self.channel, AnyGuildChannel
+        ), "guild_id exists but channel is not a guild channel?"
 
+        guild = self.channel.guild
         member = guild.members.get(self.raw_author.id)
         if not member:
             # kicked?

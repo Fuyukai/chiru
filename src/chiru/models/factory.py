@@ -1,10 +1,17 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, overload
 
 from chiru.cache import ObjectCache
-from chiru.models.channel import Channel
+from chiru.models.channel import (
+    AnyGuildChannel,
+    BaseChannel,
+    ChannelType,
+    TextualGuildChannel,
+    UnsupportedChannel,
+    UnsupportedGuildChannel,
+)
 from chiru.models.guild import (
     Guild,
     GuildChannelList,
@@ -93,14 +100,40 @@ class ModelObjectFactory:
 
         return obb
 
-    def make_channel(self, channel_data: Mapping[str, Any]) -> Channel:
+    @overload
+    def make_channel(
+        self,
+        channel_data: Mapping[str, Any],
+    ) -> BaseChannel: ...
+
+    @overload
+    def make_channel(
+        self, channel_data: Mapping[str, Any], from_guild: Literal[True]
+    ) -> AnyGuildChannel: ...
+
+    def make_channel(
+        self,
+        channel_data: Mapping[str, Any],
+        from_guild: bool = False,
+    ) -> BaseChannel | AnyGuildChannel:
         """
         Creates a new stateful :class:`.Channel`.
         """
 
-        obb: Channel = CONVERTER.structure(channel_data, Channel)
-        obb._chiru_set_client(bot=self._client)
+        type: ChannelType = ChannelType(channel_data["type"])
 
+        obb: BaseChannel
+        match type:
+            case ChannelType.GUILD_TEXT:
+                obb = CONVERTER.structure(channel_data, TextualGuildChannel)
+
+            case _:
+                if from_guild:
+                    obb = CONVERTER.structure(channel_data, UnsupportedGuildChannel)
+                else:
+                    obb = CONVERTER.structure(channel_data, UnsupportedChannel)
+
+        obb._chiru_set_client(bot=self._client)
         return obb
 
     def make_guild(

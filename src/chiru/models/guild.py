@@ -9,7 +9,7 @@ import cattr
 from cattr import Converter, override
 
 from chiru.models.base import DiscordObject, StatefulMixin
-from chiru.models.channel import Channel, RawChannel
+from chiru.models.channel import AnyGuildChannel, RawChannel
 from chiru.models.emoji import RawCustomEmoji
 from chiru.models.member import Member, RawMember
 from chiru.models.user import User
@@ -22,12 +22,12 @@ DObjT = TypeVar("DObjT")
 
 @final
 @attr.s(slots=True)
-class GuildChannelList(Mapping[int, Channel]):
+class GuildChannelList(Mapping[int, AnyGuildChannel]):
     """
     A more stateful container for the channels in a guild.
     """
 
-    _channels: dict[int, Channel] = attr.ib(factory=dict)
+    _channels: dict[int, AnyGuildChannel] = attr.ib(factory=dict)
 
     @classmethod
     def from_guild_packet(
@@ -40,15 +40,15 @@ class GuildChannelList(Mapping[int, Channel]):
         Creates a new channel list from a ``GUILD_CREATE`` packet.
         """
 
-        channels: dict[int, Channel] = {}
+        channels: dict[int, AnyGuildChannel] = {}
         for data in packet.get("channels", []):
-            created_channel = factory.make_channel(data)
+            created_channel = factory.make_channel(data, from_guild=True)
             created_channel.guild_id = guild_id
             channels[created_channel.id] = created_channel
 
         return GuildChannelList(channels)
 
-    def __getitem__(self, __key: int) -> Channel:
+    def __getitem__(self, __key: int) -> AnyGuildChannel:
         return self._channels[__key]
 
     def __iter__(self) -> Iterator[int]:

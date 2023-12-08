@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import abc
 import enum
 from collections.abc import Iterable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal, cast
 
 import attr
 import cattr
@@ -11,10 +12,10 @@ from cattr import Converter
 from chiru.mentions import AllowedMentions
 from chiru.models.base import DiscordObject, StatefulMixin
 from chiru.models.embed import Embed
-from chiru.models.message import Message
 
 if TYPE_CHECKING:
     from chiru.models.guild import Guild
+    from chiru.models.message import Message
 
 
 class ChannelType(enum.Enum):
@@ -56,41 +57,6 @@ class ChannelType(enum.Enum):
     GUILD_MEDIA = 16
 
 
-class ChannelMessages:
-    """
-    A container for channel messages.
-    """
-
-    def __init__(self, channel: Channel) -> None:
-        self._channel = channel
-
-    async def send(
-        self,
-        content: str | None = None,
-        embed: Embed | Iterable[Embed] | None = None,
-        allowed_mentions: AllowedMentions | None = None,
-    ) -> Message:
-        """
-        Sends a single message to this channel.
-        :param content: The textual content to send. Optional if this message contains an embed or
-            an attachment(s).
-
-        :param embed: A :class:`.Embed` instance, or iterable of such instances, to send. Optional
-            if the message contains regular textual content or attachments.
-
-        :param allowed_mentions: A :class:`.AllowedMentions` instance to control what this message
-            is allowed to mention. For more information, see :ref:`allowed-mentions`.
-        """
-
-        return await self._channel._client.http.send_message(
-            channel_id=self._channel.id,
-            content=content,
-            embed=embed,
-            allowed_mentions=allowed_mentions,
-            factory=self._channel._client.stateful_factory,
-        )
-
-
 @attr.s(kw_only=True)
 class RawChannel(DiscordObject):
     """
@@ -99,7 +65,15 @@ class RawChannel(DiscordObject):
 
     @classmethod
     def configure_converter(cls, converter: Converter) -> None:
-        for klass in (cls, Channel):
+        for klass in (
+            cls,
+            BaseChannel,
+            TextualChannel,
+            TextualGuildChannel,
+            UnsupportedChannel,
+            UnsupportedGuildChannel,
+            CategoryChannel,
+        ):
             converter.register_structure_hook(
                 klass,
                 cattr.gen.make_dict_structure_fn(
@@ -124,31 +98,122 @@ class RawChannel(DiscordObject):
     #: The topic for this channel, if any.
     topic: str = attr.ib(default=None)
 
+    #: The parent for this channel, if any.
+    parent_id: int | None = attr.ib(default=None)
+
     #: If this channel is NSFW or not. Defaults to False.
     nsfw: bool = attr.ib(default=False)
 
 
-@attr.s()
-class Channel(RawChannel, StatefulMixin):
+@attr.s(kw_only=True)
+class BaseChannel(RawChannel, StatefulMixin, metaclass=abc.ABCMeta):
     """
-    The stateful version of :class:`.RawChannel`.
+    The base class for a single channel, either in a guild or a DM. This is an abstract class;
+    see :class:`.TextualChannel`, :class:`.VoiceChannel`, or :class:`.CategoryChannel`.
     """
 
-    #: The guild ID for this channel, if any.
-    guild_id: int | None = attr.ib(default=None)
 
-    messages: ChannelMessages = attr.ib(init=False)
+class AnyGuildChannel(BaseChannel, metaclass=abc.ABCMeta):
+    """
+    Base class for any channel that is within a guild.
+    """
 
-    def __attrs_post_init__(self) -> None:
-        self.messages = ChannelMessages(self)
+    #: The ID of the guild that this channel is in.
+    guild_id: int = attr.ib(init=False)
 
     @property
-    def guild(self) -> Guild | None:
+    def guild(self) -> Guild:
         """
-        The :class:`.Guild` for this channel, if any.
+        The :class:`.Guild` for this channel.
         """
 
-        if not self.guild_id:
+        guild = self._client.object_cache.get_available_guild(self.guild_id)
+        assert guild, "missing guild in cache"
+        return guild
+
+    @property
+    def parent(self) -> CategoryChannel | None:
+        """
+        Gets the category channel parent of this channel, if any.
+        """
+
+        if not self.parent_id:
             return None
 
-        return self._client.object_cache.get_available_guild(self.guild_id)
+        return cast(CategoryChannel, self.guild.channels[self.parent_id])
+
+
+@attr.s(kw_only=True)
+class UnsupportedChannel(BaseChannel):
+    """
+    Stub class for any channel that is not otherwise supported.
+    """
+
+
+@attr.s(kw_only=True)
+class UnsupportedGuildChannel(UnsupportedChannel, AnyGuildChannel):
+    """
+    Like a :class:`.UnsupportedChannel`, but within a guild.
+    """
+
+
+@attr.s(kw_only=True)
+class CategoryChannel(AnyGuildChannel):
+    """
+    A channel that contains
+    """
+
+    type: Literal[ChannelType.GUILD_CATEGORY] = attr.ib()
+
+    @property
+    def children(self) -> Iterable[BaseChannel]:
+        """
+        An iterable of the channels that this category owns.
+        """
+
+        for channel in self.guild.channels.values():
+            if channel.parent_id == self.parent_id:
+                yield channel
+
+
+@attr.s(kw_only=True)
+class TextualChannel(BaseChannel):
+    """
+    The base type for a channel that can have messages to sent to it.
+    """
+
+    async def send_message(
+        self,
+        content: str | None = None,
+        embed: Embed | Iterable[Embed] | None = None,
+        allowed_mentions: AllowedMentions | None = None,
+    ) -> Message:
+        """
+        Sends a single message to this channel.
+
+        :param content: The textual content to send. Optional if this message contains an embed or
+            an attachment(s).
+
+        :param embed: A :class:`.Embed` instance, or iterable of such instances, to send. Optional
+            if the message contains regular textual content or attachments.
+
+        :param allowed_mentions: A :class:`.AllowedMentions` instance to control what this message
+            is allowed to mention. For more information, see :ref:`allowed-mentions`.
+        """
+
+        return await self._client.http.send_message(
+            channel_id=self.id,
+            content=content,
+            embed=embed,
+            allowed_mentions=allowed_mentions,
+            factory=self._client.stateful_factory,
+        )
+
+
+@attr.s(kw_only=True)
+class TextualGuildChannel(TextualChannel, AnyGuildChannel):
+    """
+    Mixin type of both :class:`.TextualChannel` and :class:`.AnyGuildChannel`.
+    """
+
+    type: Literal[ChannelType.GUILD_TEXT] = attr.ib()
