@@ -143,8 +143,9 @@ class ModelObjectFactory:
             case ChannelType.DM:
                 obb = fn(DirectMessageChannel)
 
+                # mypy doesn't like this
                 for recipient in obb.recipients:
-                    recipient._chiru_set_client(bot=self._client)
+                    recipient._chiru_set_client(bot=self._client)  # type: ignore
 
             case ChannelType.GUILD_TEXT:
                 obb = fn(TextualGuildChannel)

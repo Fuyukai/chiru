@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import abc
 import enum
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from typing import TYPE_CHECKING, Literal, TypeAlias, cast
 
 import attr
@@ -112,7 +112,7 @@ class RawChannel(DiscordObject):
 
     #: The list of recipients for this channel. This will be empty if this is not a direct message
     #: channel.
-    recipients: list[RawUser] = attr.ib(factory=list)
+    recipients: Sequence[RawUser] = attr.ib(factory=list)
 
     #: The ID of the last message that was sent in this channel. This may be None if the channel
     #: has no messages in it.
@@ -263,7 +263,7 @@ class DirectMessageChannel(TextualChannel):
     type: Literal[ChannelType.DM] = attr.ib()
 
     #: The list of recipients to this channel.
-    recipients: list[User] = attr.ib()
+    recipients: Sequence[User] = attr.ib()
 
     @property
     def other_user(self) -> User:
