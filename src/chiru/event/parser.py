@@ -172,7 +172,7 @@ class CachedEventParser:
         for presence in raw_presences:
             made_presence = self._make_presence_update(presence, guild_id=created_guild.id)
             if made_presence is not None:
-                presences.append(presence)
+                presences.append(made_presence)
 
         if presences:
             yield BulkPresences(guild=created_guild, child_events=presences)
@@ -207,7 +207,7 @@ class CachedEventParser:
         for presence in raw_presences:
             made_presence = self._make_presence_update(presence, guild_id=guild.id)
             if made_presence is not None:
-                presences.append(presence)
+                presences.append(made_presence)
 
         if presences:
             yield BulkPresences(guild=guild, child_events=presences)
