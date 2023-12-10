@@ -240,7 +240,7 @@ class MessageDelete(DispatchedEvent):
     #: The channel that the message was deleted from.
     channel: BaseChannel = attr.ib()
 
-    #: The guild that the message was deleted from, if any.
+    #: The guild that the channel was in, if any.
     guild: Guild | None = attr.ib()
 
 
@@ -254,10 +254,10 @@ class MessageBulkDelete(DispatchedEvent):
     #: The list of IDs of the deleted messages.
     messages: list[int] = attr.ib()
 
-    #: The ID of the channel that the messages were deleted from.
+    #: The channel that the messages were deleted from.
     channel: BaseChannel = attr.ib()
 
-    #: The ID of the guild that the messages were deleted from, if any.
+    #: The guild that the channel was in, if any.
     guild: Guild | None = attr.ib()
 
     def as_single_events(self) -> Iterable[DispatchedEvent]:
@@ -282,3 +282,14 @@ class MessageBulkDelete(DispatchedEvent):
 
         for id in self.messages:
             yield MessageDelete(message_id=id, channel=self.channel, guild=self.guild)
+
+
+@attr.s(slots=True, frozen=True, kw_only=True)
+@final
+class ChannelCreate(DispatchedEvent):
+    """
+    Published when a single channel is created.
+    """
+
+    #: The newly created :class:`.BaseChannel`.
+    channel: BaseChannel = attr.ib()

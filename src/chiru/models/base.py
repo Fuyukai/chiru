@@ -46,6 +46,7 @@ class DiscordObject:
     def __int__(self) -> int:
         return self.id
 
+
 @attr.s(kw_only=True)
 class StatefulMixin:
     """

@@ -7,6 +7,7 @@ import structlog
 from chiru.cache import ObjectCache
 from chiru.event.chunker import GuildChunker
 from chiru.event.model import (
+    ChannelCreate,
     Connected,
     DispatchedEvent,
     GuildAvailable,
@@ -25,6 +26,7 @@ from chiru.event.model import (
     ShardReady,
 )
 from chiru.gateway.event import GatewayDispatch
+from chiru.models.channel import AnyGuildChannel
 from chiru.models.factory import ModelObjectFactory
 from chiru.models.guild import GuildEmojis, UnavailableGuild
 
@@ -238,6 +240,23 @@ class CachedEventParser:
         yield GuildEmojiUpdate(
             guild=guild, previous_emojis=previous_emojis, new_emojis=list(new_emojis.values())
         )
+
+    def _parse_channel_create(
+        self, event: GatewayDispatch, factory: ModelObjectFactory
+    ) -> Iterable[DispatchedEvent]:
+        channel = factory.make_channel(event.body)
+
+        if channel.guild_id is None:
+            self._cache.dm_channels[channel.id] = channel
+        else:
+            guild = self._cache.get_available_guild(channel.guild_id)
+            assert guild, f"channel has {channel.guild_id} but guild is not available"
+            assert isinstance(
+                channel, AnyGuildChannel
+            ), f"got a non-guild channel for guild {channel.guild_id}"
+            guild.channels._channels[channel.id] = channel
+
+        yield ChannelCreate(channel=channel)
 
     def _parse_message_create(
         self, event: GatewayDispatch, factory: ModelObjectFactory
