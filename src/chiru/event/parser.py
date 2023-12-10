@@ -168,10 +168,11 @@ class CachedEventParser:
                 yield GuildAvailable(created_guild)
 
         raw_presences: list[Any] = event.body.get("presences", [])
-        presences = [
-            self._make_presence_update(it, guild_id=created_guild.id) for it in raw_presences
-        ]
-        presences = [it for it in presences if it]
+        presences: list[PresenceUpdate] = []
+        for presence in raw_presences:
+            made_presence = self._make_presence_update(presence, guild_id=created_guild.id)
+            if made_presence is not None:
+                presences.append(presence)
 
         if presences:
             yield BulkPresences(guild=created_guild, child_events=presences)
@@ -202,8 +203,11 @@ class CachedEventParser:
             guild.members._members[member.id] = member
 
         raw_presences: list[Any] = event.body.get("presences", [])
-        presences = [self._make_presence_update(it, guild_id=guild.id) for it in raw_presences]
-        presences = [it for it in presences if it]
+        presences: list[PresenceUpdate] = []
+        for presence in raw_presences:
+            made_presence = self._make_presence_update(presence, guild_id=guild.id)
+            if made_presence is not None:
+                presences.append(presence)
 
         if presences:
             yield BulkPresences(guild=guild, child_events=presences)
