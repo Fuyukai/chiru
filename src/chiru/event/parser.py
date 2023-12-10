@@ -8,6 +8,7 @@ from chiru.cache import ObjectCache
 from chiru.event.chunker import GuildChunker
 from chiru.event.model import (
     ChannelCreate,
+    ChannelDelete,
     ChannelUpdate,
     Connected,
     DispatchedEvent,
@@ -27,10 +28,11 @@ from chiru.event.model import (
     ShardReady,
 )
 from chiru.gateway.event import GatewayDispatch
-from chiru.models.channel import AnyGuildChannel, BaseChannel
+from chiru.models.channel import AnyGuildChannel, BaseChannel, RawChannel
 from chiru.models.factory import ModelObjectFactory
 from chiru.models.guild import GuildEmojis, UnavailableGuild
 from chiru.models.member import Member
+from chiru.serialise import CONVERTER
 
 if TYPE_CHECKING:
     pass
@@ -222,12 +224,7 @@ class CachedEventParser:
             old_member = guild.members._members.pop(user.id, None)
             guild.member_count -= 1
 
-        yield GuildMemberRemove(
-            guild_id=guild_id, 
-            user=user, 
-            cached_member=old_member,
-            guild=guild
-        )
+        yield GuildMemberRemove(guild_id=guild_id, user=user, cached_member=old_member, guild=guild)
 
     def _parse_guild_member_update(
         self, event: GatewayDispatch, factory: ModelObjectFactory
@@ -285,6 +282,24 @@ class CachedEventParser:
     ) -> Iterable[DispatchedEvent]:
         old, new = self._channel_common(event, factory)
         yield ChannelUpdate(old_channel=old, new_channel=new)
+
+    def _parse_channel_delete(
+        self,
+        event: GatewayDispatch,
+        factory: ModelObjectFactory,
+    ) -> Iterable[DispatchedEvent]:
+        raw_channel = CONVERTER.structure(event.body, RawChannel)
+        existing_channel = self._cache.find_channel(raw_channel.id)
+
+        if not existing_channel:
+            yield ChannelDelete(old_channel=None, dispatch_channel=raw_channel)
+        else:
+            if not isinstance(existing_channel, AnyGuildChannel):
+                self._cache.dm_channels.pop(existing_channel.id)
+            else:
+                existing_channel.guild.channels._channels.pop(existing_channel.id)
+
+            yield ChannelDelete(old_channel=existing_channel, dispatch_channel=raw_channel)
 
     def _parse_message_create(
         self, event: GatewayDispatch, factory: ModelObjectFactory

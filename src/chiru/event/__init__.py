@@ -6,6 +6,7 @@ from chiru.event.dispatcher import (
 )
 from chiru.event.model import (
     ChannelCreate as ChannelCreate,
+    ChannelDelete as ChannelDelete,
     ChannelUpdate as ChannelUpdate,
     Connected as Connected,
     DispatchedEvent as DispatchedEvent,

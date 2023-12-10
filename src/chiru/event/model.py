@@ -3,7 +3,7 @@ from typing import final
 
 import attr
 
-from chiru.models.channel import BaseChannel, TextualChannel
+from chiru.models.channel import BaseChannel, RawChannel, TextualChannel
 from chiru.models.emoji import RawCustomEmoji
 from chiru.models.guild import Guild
 from chiru.models.member import Member
@@ -303,6 +303,7 @@ class ChannelCreate(DispatchedEvent):
 
 
 @attr.s(slots=True, frozen=True, kw_only=True)
+@final
 class ChannelUpdate(DispatchedEvent):
     """
     Published when a single channel is updated.
@@ -313,3 +314,17 @@ class ChannelUpdate(DispatchedEvent):
 
     #: The updated :class:`.BaseChannel` object.
     new_channel: BaseChannel = attr.ib()
+
+
+@attr.s(slots=True, frozen=True, kw_only=True)
+@final
+class ChannelDelete(DispatchedEvent):
+    """
+    Published when a single channel is deleted.
+    """
+
+    #: The locally cached version of the channel, if it existed.
+    old_channel: BaseChannel | None = attr.ib()
+
+    #: The raw channel object that was carried along with the dispatched ``CHANNEL_DELETE`` event.
+    dispatch_channel: RawChannel = attr.ib()
