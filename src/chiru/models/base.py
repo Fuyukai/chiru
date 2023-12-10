@@ -46,11 +46,6 @@ class DiscordObject:
     def __int__(self) -> int:
         return self.id
 
-
-#: A type alias of both ints and :class:`.DiscordObject` instances.
-type Snowflake = int | DiscordObject
-
-
 @attr.s(kw_only=True)
 class StatefulMixin:
     """

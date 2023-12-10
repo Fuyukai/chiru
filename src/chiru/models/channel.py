@@ -11,7 +11,7 @@ from cattr import Converter
 
 from chiru.exc import HttpApiRequestError
 from chiru.mentions import AllowedMentions
-from chiru.models.base import DiscordObject, Snowflake, StatefulMixin
+from chiru.models.base import DiscordObject, StatefulMixin
 from chiru.models.embed import Embed
 
 if TYPE_CHECKING:
@@ -200,7 +200,7 @@ class TextualChannel(BaseChannel):
 
     async def get_single_message(
         self,
-        message_id: Snowflake,
+        message_id: int,
     ) -> Message | None:
         """
         Gets a single message in this channel by ID, or None if there is no such message.
