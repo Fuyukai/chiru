@@ -50,3 +50,8 @@ p, li, strong, em, a {
 section#low-level-api span.caption-text { display: none; }
 section#high-level-api span.caption-text { display: none; }
 section#getting-started span.caption-text { display: none; }
+
+/* https://github.com/readthedocs/sphinx_rtd_theme/issues/1301 */
+dl.py.property {
+    display: block !important;
+}

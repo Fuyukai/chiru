@@ -3,7 +3,10 @@
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
+import os
 from importlib.metadata import version as get_version
+
+os.environ["SPHINX_AUTODOC_RELOAD_MODULES"] = "1"
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
@@ -23,6 +26,8 @@ extensions = [
     "sphinx_autodoc_typehints",
     "sphinxcontrib.jquery",
     "sphinx_inline_tabs",
+    "sphinx.ext.graphviz",
+    "sphinx.ext.inheritance_diagram",
 ]
 
 templates_path = ["_templates"]
@@ -33,6 +38,8 @@ autodoc_default_options = {
     "member-order": "bysource",
     "show-inheritance": None,
 }
+
+autodoc_class_signature = "separated"
 
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3/", None),
@@ -62,3 +69,23 @@ html_theme_options = {
     "collapse_navigation": False,
     "style_external_links": True,
 }
+
+def skip_init_on_models(app, what, name, obj, skip, options):
+    # gross and hacky.
+
+    if name != "__init__":
+        return skip
+
+    if obj.__module__.startswith("chiru.event.model"):
+        return True
+
+    if obj.__module__.startswith("chiru.models"):
+        if obj.__module__ not in ("chiru.models.factory", "chiru.models.base"):
+            return True
+        
+        return skip
+    
+    return skip
+
+def setup(app):
+    app.connect("autodoc-skip-member", skip_init_on_models)

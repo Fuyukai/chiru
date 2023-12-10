@@ -82,6 +82,8 @@ they respond interactively to user-initiated actions.
    highlevel/models.rst
    highlevel/client.rst
    highlevel/events.rst
+   highlevel/channels.rst
+   highlevel/messages.rst
 
 
 

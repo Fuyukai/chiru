@@ -48,7 +48,7 @@ Stateful Models
 Stateful models are similar to stateless models (in fact, all stateful models inherit from their
 stateless variant), but additionally hold a reference to the :class:`.ChiruBot` that created them.
 
-Stateful models can be created manually with the :class:`.StatefulObjectFactory`:
+Stateful models can be created manually with the :class:`.ModelObjectFactory`:
 
 .. code-block:: python
 
@@ -68,7 +68,7 @@ Stateful models can be created manually with the :class:`.StatefulObjectFactory`
     from underneath you in the cache.
 
 
-.. autoclass:: chiru.models.factory.StatefulObjectFactory
+.. autoclass:: chiru.models.factory.ModelObjectFactory
    :members:
 
 Snowflakes

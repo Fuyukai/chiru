@@ -72,7 +72,6 @@ listening to inbound events.
 
 .. code-block:: python
 
-
     async def print_message_content(ctx: EventContext, evt: MessageCreate):
         print(evt.message.content)
 
