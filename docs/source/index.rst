@@ -6,7 +6,7 @@
 Welcome to Chiru's documentation!
 =================================
 
-*Chiru* is a Python 3.11+ asynchronous wrapper for the Discord HTTP API and gateway, using the
+*Chiru* is a Python 3.12+ asynchronous wrapper for the Discord HTTP API and gateway, using the
 `AnyIO`_ library. It is designed for writing traditional (think 2017 style) Discord bots.
 
 Installation
