@@ -57,7 +57,7 @@ class StatefulMixin:
     whereas stateful models can directly look up other objects from the object cache.
     """
 
-    _client: ChiruBot = attr.ib(init=False)
+    _client: ChiruBot = attr.ib(init=False, repr=False)
 
     def _chiru_set_client(self, bot: ChiruBot) -> None:
         self._client = bot
