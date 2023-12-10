@@ -34,7 +34,7 @@ from chiru.models.channel import AnyGuildChannel, BaseChannel, RawChannel
 from chiru.models.factory import ModelObjectFactory
 from chiru.models.guild import GuildEmojis, UnavailableGuild
 from chiru.models.member import Member
-from chiru.models.presence import Activity, Presence
+from chiru.models.presence import Activity, Presence, PresenceStatus
 from chiru.serialise import CONVERTER
 
 if TYPE_CHECKING:
@@ -257,7 +257,7 @@ class CachedEventParser:
             return None
 
         # bail the fuck out
-        status: str | None = data.get("status")
+        status: PresenceStatus | None = data.get("status")
         if not status:
             return None
 
