@@ -304,5 +304,8 @@ class ChannelUpdate(DispatchedEvent):
     Published when a single channel is updated.
     """
 
-    #: The updated :class:`.BaseChannel`.
-    channel: BaseChannel = attr.ib()
+    #: The old :class:`.BaseChannel` object, if any existed and was cached.
+    old_channel: BaseChannel | None = attr.ib()
+
+    #: The updated :class:`.BaseChannel` object.
+    new_channel: BaseChannel = attr.ib()

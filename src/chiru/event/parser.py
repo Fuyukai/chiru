@@ -242,30 +242,37 @@ class CachedEventParser:
             guild=guild, previous_emojis=previous_emojis, new_emojis=list(new_emojis.values())
         )
 
-    def _channel_common(self, event: GatewayDispatch, factory: ModelObjectFactory) -> BaseChannel:
+    def _channel_common(
+        self, event: GatewayDispatch, factory: ModelObjectFactory
+    ) -> tuple[BaseChannel | None, BaseChannel]:
         channel = factory.make_channel(event.body)
 
         if channel.guild_id is None:
+            old = self._cache.dm_channels.get(channel.id)
             self._cache.dm_channels[channel.id] = channel
-        else:
-            guild = self._cache.get_available_guild(channel.guild_id)
-            assert guild, f"channel has {channel.guild_id} but guild is not available"
-            assert isinstance(
-                channel, AnyGuildChannel
-            ), f"got a non-guild channel for guild {channel.guild_id}"
-            guild.channels._channels[channel.id] = channel
+            return (old, channel)
 
-        return channel
+        guild = self._cache.get_available_guild(channel.guild_id)
+        assert guild, f"channel has {channel.guild_id} but guild is not available"
+        assert isinstance(
+            channel, AnyGuildChannel
+        ), f"got a non-guild channel for guild {channel.guild_id}"
+        old = guild.channels._channels.get(channel.id)
+        guild.channels._channels[channel.id] = channel
+
+        return (old, channel)
 
     def _parse_channel_create(
         self, event: GatewayDispatch, factory: ModelObjectFactory
     ) -> Iterable[DispatchedEvent]:
-        yield ChannelCreate(channel=self._channel_common(event, factory))
+        _, channel = self._channel_common(event, factory)
+        yield ChannelCreate(channel=channel)
 
     def _parse_channel_update(
         self, event: GatewayDispatch, factory: ModelObjectFactory
     ) -> Iterable[DispatchedEvent]:
-        yield ChannelUpdate(channel=self._channel_common(event, factory))
+        old, new = self._channel_common(event, factory)
+        yield ChannelUpdate(old_channel=old, new_channel=new)
 
     def _parse_message_create(
         self, event: GatewayDispatch, factory: ModelObjectFactory
