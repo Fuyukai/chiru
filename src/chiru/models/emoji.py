@@ -40,22 +40,22 @@ class RawCustomEmoji(DiscordObject):
     #: The name for this emoji.
     name: str = attr.ib()
 
-    #: The list of role IDs allowed to use this emoji.
-    roles: list[int] = attr.ib()
+    #: The list of role IDs allowed to use this emoji. An empty list means anyone can.
+    roles: list[int] = attr.ib(factory=list)
 
     # in practice, this is always true.
     #: If this emoji requires colons to be used.
-    require_colons: bool = attr.ib()
+    require_colons: bool = attr.ib(default=True)
 
     #: If this emoji is managed by an external integration.
-    managed: bool = attr.ib()
+    managed: bool = attr.ib(default=False)
 
     #: If this emoji is animated.
-    animated: bool = attr.ib()
+    animated: bool = attr.ib(default=False)
 
     #: If this emoji is available or not. Emojis may be unavailable in certain situations, such as
     #: if a server that previously had a higher cap no longer does.
-    available: bool = attr.ib()
+    available: bool = attr.ib(default=False)
 
     @property
     def url(self) -> str:
