@@ -93,6 +93,7 @@ class CachedEventParser:
 
         fn = getattr(self, f"_parse_{event.event_name.lower()}", None)
         if fn is None:
+            logger.warning("Unknown event", shard=event.shard_id, event_name=event.event_name)
             return []
 
         return list(fn(event, factory))
