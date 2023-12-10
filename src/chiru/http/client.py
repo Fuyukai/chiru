@@ -11,6 +11,7 @@ import structlog
 from anyio.abc import TaskGroup
 from httpx import AsyncClient, Response
 
+from chiru.exc import DiscordError, HttpApiError, HttpApiRequestError
 from chiru.http.ratelimit import RatelimitManager
 from chiru.http.response import GatewayResponse
 from chiru.mentions import AllowedMentions
@@ -29,7 +30,6 @@ from chiru.serialise import CONVERTER
 
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger(name=__name__)
-
 
 class Endpoints:
     """
@@ -54,6 +54,7 @@ class Endpoints:
         self.base_url = base_url
 
 
+# TODO: Don't expose httpx.
 class ChiruHttpClient:
     """
     Wrapper around the various Discord HTTP actions.
@@ -205,10 +206,17 @@ class ChiruHttpClient:
                 reset = float(response.headers.get("X-Ratelimit-Reset-After", 1))
                 rl.apply_ratelimit_statistics(reset, limit)
 
-                response.raise_for_status()
-                return response
+                if 200 <= response.status_code < 300:
+                    return response
 
-        raise RuntimeError("Failed to get a valid response after five tries.")
+                if 400 <= response.status_code < 500:
+                    raise HttpApiRequestError.from_response(
+                        status_code=response.status_code, body=response.json()
+                    )
+            
+                raise HttpApiError(status_code=response.status_code)
+
+        raise DiscordError("Failed to get a valid response after five tries.")
 
     async def get_gateway_info(self) -> GatewayResponse:
         """
