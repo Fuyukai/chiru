@@ -1,5 +1,5 @@
 from collections.abc import Iterable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import attr
 import structlog
@@ -19,11 +19,15 @@ from chiru.event.model import (
     GuildStreamed,
     InvalidGuildChunk,
     MessageCreate,
+    MessageUpdate,
     ShardReady,
 )
 from chiru.gateway.event import GatewayDispatch
 from chiru.models.factory import ModelObjectFactory
 from chiru.models.guild import GuildEmojis, UnavailableGuild
+
+if TYPE_CHECKING:
+    pass
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(name=__name__)
 
@@ -193,10 +197,6 @@ class CachedEventParser:
     def _parse_message_create(
         event: GatewayDispatch, factory: ModelObjectFactory
     ) -> Iterable[DispatchedEvent]:
-        """
-        Parses a MESSAGE_CREATE event.
-        """
-
         message = factory.make_message(event.body)
 
         # backfill member data from the message, in case we couldn't chunk.
@@ -215,6 +215,16 @@ class CachedEventParser:
             guild.members._backfill_member_data(factory, event.body["member"], message.raw_author)
 
         yield MessageCreate(message=message)
+
+    @staticmethod
+    def _parse_message_update(
+        event: GatewayDispatch,
+        factory: ModelObjectFactory,
+    ) -> Iterable[DispatchedEvent]:
+        print(event.body)
+        message = factory.make_message(event.body)
+
+        yield MessageUpdate(message=message)
 
     def _parse_guild_member_add(
         self, event: GatewayDispatch, factory: ModelObjectFactory

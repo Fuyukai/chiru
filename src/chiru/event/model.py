@@ -187,7 +187,7 @@ class MessageCreate(DispatchedEvent):
     Published when a message is created within a channel.
 
     The content field of messages with this event will be empty if the bot user does not have the
-    ``MESSAGE_CONTENT`` intent (enabled by default). 
+    ``MESSAGE_CONTENT`` intent (enabled by default).
     """
 
     #: The message that was actually created.
@@ -197,6 +197,30 @@ class MessageCreate(DispatchedEvent):
     def channel(self) -> TextualChannel:
         """
         Gets the channel that this message was created in.
+        """
+
+        return self.message.channel
+
+
+@final
+@attr.s(frozen=True, slots=True, kw_only=True)
+class MessageUpdate(DispatchedEvent):
+    """
+    Published when a message is updated within a channel (i.e. edited).
+
+    .. warning::
+
+        The message objects here may be missing additional data that would otherwise be included
+        for regular message creation events.
+    """
+
+    #: The *new* message that was the result of the update.
+    message: Message = attr.ib()
+
+    @property
+    def channel(self) -> TextualChannel:
+        """
+        Getts the channel that this message was updated within.
         """
 
         return self.message.channel
