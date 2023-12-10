@@ -1,10 +1,18 @@
+from __future__ import annotations
+
 from types import NotImplementedType
+from typing import TYPE_CHECKING
 
 import attr
 import cattrs
 from cattrs.gen import make_dict_structure_fn
 
 from chiru.models.base import DiscordObject, StatefulMixin
+
+if TYPE_CHECKING:
+    from chiru.models.channel import DirectMessageChannel
+else:
+    type DirectMessageChannel = object
 
 
 @attr.s(kw_only=True, hash=False, eq=False)
@@ -68,3 +76,12 @@ class User(RawUser, StatefulMixin):
     """
     Stateful version of :class:`.RawUser`.
     """
+
+    async def open_direct_message_channel(self) -> DirectMessageChannel:
+        """
+        Opens a new :class:`.DirectMessageChannel` with the specified user.
+        """
+
+        return await self._client.http.create_direct_message_channel(
+            user_id=self.id, factory=self._client.stateful_factory
+        )

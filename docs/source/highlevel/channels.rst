@@ -31,6 +31,25 @@ guild ID. If a channel is not a :class:`.AnyGuildChannel`, then it is a direct m
 
 .. autoclass:: chiru.models.channel.ChannelType
 
+Direct Messages
+---------------
+
+Direct messages work via a special type of channel with a single recipient (the other user in the 
+DM). These channels are represented with :class:`.DirectMessageChannel`.
+
+.. warning:: 
+
+    If, through various mechanisms, you have managed to get your bot into a group DM it will be 
+    represented with a :class:`.UnsupportedChannel`.
+
+Direct message channels are automatically created when a user DMs your bot and can be created with
+:func:`.User.open_direct_message_channel`. 
+
+.. code-block:: python
+
+    channel = await some_user.open_direct_message_channel()
+    await channel.send_message(content="Boo!")
+
 .. _text-channels:
 
 Textual Channels & Messages

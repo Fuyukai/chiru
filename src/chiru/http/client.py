@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from importlib.metadata import version
 from math import ceil
-from typing import Any, overload
+from typing import Any, cast, overload
 
 import anyio
 import httpx
@@ -15,6 +15,7 @@ from chiru.exc import DiscordError, HttpApiError, HttpApiRequestError
 from chiru.http.ratelimit import RatelimitManager
 from chiru.http.response import GatewayResponse
 from chiru.mentions import AllowedMentions
+from chiru.models.channel import DirectMessageChannel, RawChannel
 from chiru.models.embed import Embed
 from chiru.models.emoji import RawCustomEmoji, RawCustomEmojiWithOwner
 from chiru.models.factory import ModelObjectFactory
@@ -41,6 +42,10 @@ class Endpoints:
 
     GET_GATEWAY = API_BASE + "/gateway/bot"
     OAUTH2_ME = API_BASE + "/applications/@me"
+
+    USERS = API_BASE + "/users"
+    USERS_ME = USERS + "/@me"
+    ME_CHANNELS = USERS_ME + "/channels"
 
     CHANNEL = API_BASE + "/channels/{channel_id}"
     CHANNEL_MESSAGES = CHANNEL + "/messages"
@@ -236,6 +241,43 @@ class ChiruHttpClient:
         resp = await self.request(bucket="oauth2:me", method="GET", path=Endpoints.OAUTH2_ME)
 
         return CONVERTER.structure(resp.json(), OAuthApplication)
+
+    @overload
+    async def create_direct_message_channel(self, *, user_id: int) -> RawChannel: ...
+
+    @overload
+    async def create_direct_message_channel(
+        self,
+        *,
+        user_id: int,
+        factory: ModelObjectFactory,
+    ) -> DirectMessageChannel: ...
+
+    async def create_direct_message_channel(
+        self, *, user_id: int, factory: ModelObjectFactory | None = None
+    ) -> RawChannel | DirectMessageChannel:
+        """
+        Creates a new direct message channel to the specified user.
+
+        :param user_id: The ID of the user to create the channel for.
+        :param factory: The :class:`.ModelObjectFactory` to use for creating stateful objects,
+            if any.
+
+        :return: Either a :class:`.DirectMessageChannel` if ``factory`` is provided; otherwise, a
+            :class:`.RawChannel` for the new channel.
+        """
+
+        response = await self.request(
+            bucket="create-dm",
+            path=Endpoints.ME_CHANNELS,
+            method="POST",
+            body_json={"recipient_id": str(user_id)},
+        )
+
+        if factory is not None:
+            return cast(DirectMessageChannel, factory.make_channel(response.json()))
+
+        return CONVERTER.structure(response.json(), RawChannel)
 
     @overload
     async def get_message(self, *, channel_id: int, message_id: int) -> RawMessage: ...
