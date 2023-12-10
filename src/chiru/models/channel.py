@@ -107,6 +107,16 @@ class RawChannel(DiscordObject):
     #: If this channel is NSFW or not. Defaults to False.
     nsfw: bool = attr.ib(default=False)
 
+    #: The ID of the last message that was sent in this channel. This may be None if the channel
+    #: has no messages in it.
+    #:
+    #: .. warning::
+    #:      
+    #:      This may not be a valid message ID if the most recent message was deleted. Consider it
+    #:      a cursor rather than absolute truth.
+    last_message_id: int | None = attr.ib(default=None)
+
+
 
 @attr.s(kw_only=True)
 class BaseChannel(RawChannel, StatefulMixin, metaclass=abc.ABCMeta):
