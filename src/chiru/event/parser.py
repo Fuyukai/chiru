@@ -195,11 +195,15 @@ class CachedEventParser:
 
         yield evt
 
-    @staticmethod
     def _parse_message_create(
+        self,
         event: GatewayDispatch, factory: ModelObjectFactory
     ) -> Iterable[DispatchedEvent]:
         message = factory.make_message(event.body)
+
+        channel = self._cache.find_channel(message.channel_id)
+        if channel is not None:
+            channel.last_message_id = message.id
 
         # backfill member data from the message, in case we couldn't chunk.
 
