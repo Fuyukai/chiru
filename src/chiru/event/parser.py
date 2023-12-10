@@ -195,6 +195,50 @@ class CachedEventParser:
 
         yield evt
 
+    def _parse_guild_member_add(
+        self, event: GatewayDispatch, factory: ModelObjectFactory
+    ) -> Iterable[DispatchedEvent]:
+        guild_id = int(event.body["guild_id"])
+        guild = self._cache.get_available_guild(guild_id)
+        assert guild, "STOP SENDING US INVALID GUILDS"
+        member = guild.members._backfill_member_data(factory, event.body)
+
+        yield GuildMemberAdd(guild=member.guild, member=member)
+
+    def _parse_guild_member_remove(
+        self, event: GatewayDispatch, factory: ModelObjectFactory
+    ) -> Iterable[DispatchedEvent]:
+        guild_id = int(event.body["guild_id"])
+        guild = self._cache.get_available_guild(guild_id)
+        user = factory.make_user(event.body["user"])
+
+        yield GuildMemberRemove(guild_id=guild_id, user=user, guild=guild)
+
+    def _parse_guild_member_update(
+        self, event: GatewayDispatch, factory: ModelObjectFactory
+    ) -> Iterable[DispatchedEvent]:
+        guild_id = int(event.body["guild_id"])
+        guild = self._cache.get_available_guild(guild_id)
+
+        assert guild, "received member update for an invalid guild!"
+        created_member = guild.members._backfill_member_data(factory, event.body)
+        yield GuildMemberUpdate(member=created_member)
+
+    def _parse_guild_emojis_update(
+        self, event: GatewayDispatch, factory: ModelObjectFactory
+    ) -> Iterable[DispatchedEvent]:
+        guild_id = int(event.body["guild_id"])
+        guild = self._cache.get_available_guild(guild_id)
+
+        assert guild, "received emoji update for an invalid guild!"
+        previous_emojis = list(guild.emojis.values())
+        new_emojis = GuildEmojis.from_update_packet(event.body["emojis"], factory)
+        guild.emojis = new_emojis
+
+        yield GuildEmojiUpdate(
+            guild=guild, previous_emojis=previous_emojis, new_emojis=list(new_emojis.values())
+        )
+
     def _parse_message_create(
         self, event: GatewayDispatch, factory: ModelObjectFactory
     ) -> Iterable[DispatchedEvent]:
@@ -265,47 +309,3 @@ class CachedEventParser:
         message = factory.make_message(event.body)
 
         yield MessageUpdate(message=message)
-
-    def _parse_guild_member_add(
-        self, event: GatewayDispatch, factory: ModelObjectFactory
-    ) -> Iterable[DispatchedEvent]:
-        guild_id = int(event.body["guild_id"])
-        guild = self._cache.get_available_guild(guild_id)
-        assert guild, "STOP SENDING US INVALID GUILDS"
-        member = guild.members._backfill_member_data(factory, event.body)
-
-        yield GuildMemberAdd(guild=member.guild, member=member)
-
-    def _parse_guild_member_remove(
-        self, event: GatewayDispatch, factory: ModelObjectFactory
-    ) -> Iterable[DispatchedEvent]:
-        guild_id = int(event.body["guild_id"])
-        guild = self._cache.get_available_guild(guild_id)
-        user = factory.make_user(event.body["user"])
-
-        yield GuildMemberRemove(guild_id=guild_id, user=user, guild=guild)
-
-    def _parse_guild_member_update(
-        self, event: GatewayDispatch, factory: ModelObjectFactory
-    ) -> Iterable[DispatchedEvent]:
-        guild_id = int(event.body["guild_id"])
-        guild = self._cache.get_available_guild(guild_id)
-
-        assert guild, "received member update for an invalid guild!"
-        created_member = guild.members._backfill_member_data(factory, event.body)
-        yield GuildMemberUpdate(member=created_member)
-
-    def _parse_guild_emojis_update(
-        self, event: GatewayDispatch, factory: ModelObjectFactory
-    ) -> Iterable[DispatchedEvent]:
-        guild_id = int(event.body["guild_id"])
-        guild = self._cache.get_available_guild(guild_id)
-
-        assert guild, "received emoji update for an invalid guild!"
-        previous_emojis = list(guild.emojis.values())
-        new_emojis = GuildEmojis.from_update_packet(event.body["emojis"], factory)
-        guild.emojis = new_emojis
-
-        yield GuildEmojiUpdate(
-            guild=guild, previous_emojis=previous_emojis, new_emojis=list(new_emojis.values())
-        )
