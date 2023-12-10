@@ -1,4 +1,5 @@
 import enum
+from typing import Literal
 
 import attr
 import cattr
@@ -8,6 +9,8 @@ from chiru.models.emoji import Emoji
 
 # a minimum possible effort object as the primary purpose is literally just tracking statuses
 # and status names. i might come back to this in the future but not for now.
+
+type PresenceStatus = Literal["online", "idle", "dnd"]
 
 
 class ActivityType(enum.IntEnum):
@@ -56,7 +59,7 @@ class Presence:
             )
 
     #: The current computed status for this member.
-    status: str = attr.ib()
+    status: PresenceStatus = attr.ib()
 
     #: A list of activities for this member.
     activities: list[Activity] = attr.ib(factory=list)
