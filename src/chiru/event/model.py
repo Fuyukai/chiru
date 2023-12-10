@@ -296,6 +296,11 @@ class MessageBulkDelete(DispatchedEvent):
 class ChannelCreate(DispatchedEvent):
     """
     Published when a single channel is created.
+
+    .. note::
+
+        This event is always fired if a user sends a direct message for the first time within
+        a bot's individual *session*. It does not mean a new channel has been created.
     """
 
     #: The newly created :class:`.BaseChannel`.

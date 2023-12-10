@@ -89,3 +89,14 @@ represented by the :class:`.UnsupportedChannel` (and :class:`.UnsupportedGuildTy
     :show-inheritance:
 
 .. autoclass:: chiru.models.channel.UnsupportedGuildChannel
+
+Channel Events
+--------------
+
+Events about channels are published over the gateway:
+
+.. autoclass:: chiru.event.model.ChannelCreate
+
+.. autoclass:: chiru.event.model.ChannelUpdate
+
+.. autoclass:: chiru.event.model.ChannelDelete
