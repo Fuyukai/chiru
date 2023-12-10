@@ -8,6 +8,7 @@ from typing import Any, NoReturn
 
 import anyio
 import attr
+import cattr
 import structlog
 from anyio import WouldBlock
 from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
@@ -22,6 +23,7 @@ from chiru.gateway.event import (
     GatewayHello,
     GatewayInvalidateSession,
     GatewayMemberChunkRequest,
+    GatewayPresenceUpdate,
     GatewayReconnectRequested,
     IncomingGatewayEvent,
     OutgoingGatewayEvent,
@@ -203,6 +205,27 @@ class GatewaySenderWrapper:
 
         await self._ws.send_message(json.dumps(body))
 
+    async def send_presence_update(self, payload: GatewayPresenceUpdate) -> None:
+        self.logger.debug(
+            "Outgoing message",
+            message_type=GatewayOp.PRESENCE,
+            status=payload.status,
+        )
+
+        body: dict[str, Any] = {
+            "op": GatewayOp.PRESENCE,
+            "d": {
+                "status": payload.status,
+                "afk": payload.afk,
+                "since": payload.since,
+                "activities": [cattr.unstructure(it) for it in payload.activities],
+            },
+        }
+
+        print(body)
+
+        await self._ws.send_message(json.dumps(body))
+
 
 async def _gw_receive_pump(
     ws: WebsocketClient, channel: MemoryObjectSendStream[OutgoingGatewayEvent | WsMessage]
@@ -313,6 +336,11 @@ async def _super_loop(
         # debugging), or guild member chunking.
         if isinstance(next_message, GatewayMemberChunkRequest):
             await wrapped.send_chunk_request(next_message)
+            continue
+
+        if isinstance(next_message, GatewayPresenceUpdate):
+            await wrapped.send_presence_update(next_message)
+            continue
 
         # Incoming messages are either regular textual messages which contain a JSON body, or
         # binary-encoded messages that may contain either Erlang Term Format, or compressed data.

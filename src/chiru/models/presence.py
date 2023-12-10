@@ -11,6 +11,7 @@ from chiru.models.emoji import Emoji
 # and status names. i might come back to this in the future but not for now.
 
 type PresenceStatus = Literal["online", "idle", "dnd"]
+type SendablePresenceStatus = PresenceStatus | Literal["invisible", "offline"]
 
 
 class ActivityType(enum.IntEnum):

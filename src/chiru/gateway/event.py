@@ -3,11 +3,36 @@ from typing import Any, final
 
 import attr
 
+from chiru.models.presence import Activity, SendablePresenceStatus
+
+# Not really a fan of bleeding over model code here...
+
 
 class OutgoingGatewayEvent:
     """
     Marker interface for outgoing events towards the Discord gateway.
     """
+
+
+@attr.s(frozen=True, slots=True, kw_only=True)
+@final
+class GatewayPresenceUpdate(OutgoingGatewayEvent):
+    """
+    Updates the presence for the current bot user on the current shard.
+    """
+
+    #: The status for this user.
+    status: SendablePresenceStatus = attr.ib()
+
+    #: The list of activities for this user.
+    activities: list[Activity] = attr.ib(factory=list)
+
+    # not sure what these fields are for. userbots? but why are they documented.
+    #: The absolute Unix time (milliseconds) for when the client went idle, or None if not idle.
+    since: int | None = attr.ib(default=None)
+
+    #: If True, this client is considered AFK.
+    afk: bool = attr.ib(default=False)
 
 
 @attr.s(frozen=True, slots=True, kw_only=True)

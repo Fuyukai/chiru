@@ -13,7 +13,8 @@ from chiru.bot import ChiruBot
 from chiru.event.chunker import GuildChunker
 from chiru.event.model import DispatchedEvent, Ready, ShardReady
 from chiru.event.parser import CachedEventParser
-from chiru.gateway.event import GatewayDispatch, IncomingGatewayEvent
+from chiru.gateway.collection import GatewayCollection
+from chiru.gateway.event import GatewayDispatch, IncomingGatewayEvent, OutgoingGatewayEvent
 from chiru.util import CapacityLimitedNursery, open_limiting_nursery
 
 GwEventT = TypeVar("GwEventT", bound=IncomingGatewayEvent)
@@ -25,12 +26,14 @@ DsEventT = TypeVar("DsEventT", bound=DispatchedEvent)
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(name=__name__)
 
 
-@final
 @attr.s(frozen=True, slots=True, kw_only=True)
+@final
 class EventContext:
     """
     Contains additional context for a single dispatched event.
     """
+
+    _collection: GatewayCollection = attr.ib(alias="collection")
 
     #: The shard that this event was received on.
     shard_id: int = attr.ib()
@@ -40,6 +43,13 @@ class EventContext:
 
     #: The sequence number for this event.
     sequence: int = attr.ib()
+
+    async def send_to_gateway(self, /, evt: OutgoingGatewayEvent) -> None:
+        """
+        Sends a single event to the gateway on this shard.
+        """
+
+        await self._collection.send_to_shard(self.shard_id, evt)
 
 
 @final
@@ -163,13 +173,13 @@ class StatefulEventDispatcher:
                 group.start_soon(partial(self.chunker.send_to_outgoing, collection=stream))
 
             async for event in stream:
-                # all gateway events need to be dispatched normally to potential handlers
                 await self._dispatch_event(type(event), ctx=None, event=event)
 
                 if not isinstance(event, GatewayDispatch):
                     continue
 
                 context = EventContext(
+                    collection=stream,
                     shard_id=event.shard_id,
                     dispatch_name=event.event_name,
                     sequence=event.sequence,
