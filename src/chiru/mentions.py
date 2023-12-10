@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 import attr
 from typing_extensions import override
 
-from chiru.models.base import DiscordObject
+if TYPE_CHECKING:  # Make sphinx happy!
+    from chiru.models.base import DiscordObject
 
 
 # hack for lack of easy "singleton" sentinel typing.
@@ -59,8 +60,8 @@ class _AllowedMentions(AllowedMentions):
 def make_allowed_mentions(
     *,
     parse_everyone: bool = False,
-    users: Parse | list[int | DiscordObject] = _PARSE,
-    roles: Parse | list[int | DiscordObject] = _PARSE,
+    users: type[Parse] | Parse | list[int | DiscordObject] = _PARSE,
+    roles: type[Parse] | Parse | list[int | DiscordObject] = _PARSE,
 ) -> AllowedMentions:
     """
     Creates a new allowed mentions definition from the provided values.
@@ -93,15 +94,15 @@ def make_allowed_mentions(
     if parse_everyone:
         obb.parse.append("everyone")
 
-    if isinstance(users, Parse):
+    if isinstance(users, Parse) or users == Parse:
         obb.parse.append("users")
     else:
-        _unparse(obb.users, users)
+        _unparse(obb.users, users)  # type: ignore
 
-    if isinstance(roles, Parse):
+    if isinstance(roles, Parse) or roles == Parse:
         obb.parse.append("roles")
     else:
-        _unparse(obb.roles, roles)
+        _unparse(obb.roles, roles)  # type: ignore
 
     return obb
 

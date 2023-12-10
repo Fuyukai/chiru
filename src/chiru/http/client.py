@@ -228,8 +228,6 @@ class ChiruHttpClient:
 
         return CONVERTER.structure(resp.json(), OAuthApplication)
 
-    # TODO: Figure out some good way of representing allowed_mentions.
-    # TODO: Embeds.
     # TODO: Interactions.
     @overload
     async def send_message(

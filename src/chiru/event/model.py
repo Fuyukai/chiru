@@ -185,6 +185,9 @@ class GuildEmojiUpdate(DispatchedEvent):
 class MessageCreate(DispatchedEvent):
     """
     Published when a message is created within a channel.
+
+    The content field of messages with this event will be empty if the bot user does not have the
+    ``MESSAGE_CONTENT`` intent (enabled by default). 
     """
 
     #: The message that was actually created.

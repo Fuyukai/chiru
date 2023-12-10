@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import enum
 from functools import cached_property
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, TypeAlias, cast
 
 import arrow
 import attr
@@ -18,6 +18,8 @@ from chiru.models.user import RawUser, User
 
 if TYPE_CHECKING:
     from chiru.models.guild import Guild
+else:
+    Guild: TypeAlias[object] = object
 
 
 # If only Python enums didn't suck!
@@ -175,14 +177,14 @@ class RawMessage(DiscordObject):
     #: embeds or attachments.
     content: str = attr.ib()
 
-    #: The list of :class:`.Embed`s contained within this message.
+    #: The list of :class:`.Embed` instances contained within this message.
     embeds: list[Embed] = attr.ib(factory=list)
 
-    #: The list of :class:`.RawMessageReaction`s tto this message.
+    #: The list of :class:`.RawMessageReaction` instances to this message.
     reactions: list[RawMessageReaction] = attr.ib(factory=list)
 
     # not overridden in the inherited object because mentions may not be in the guild still.
-    #: The list of :class:`.RawUser`s that this message mentions.
+    #: The list of :class:`.RawUser` instances that this message mentions.
     mentions: list[RawUser] = attr.ib()
 
     #: The timestamp for this message.
@@ -205,6 +207,8 @@ class Message(RawMessage, StatefulMixin):
     def guild(self) -> Guild | None:
         """
         Gets the guild that this message was sent in, if any.
+
+        :rtype: :class:`.Guild` | None
         """
 
         if self.guild_id is not None:

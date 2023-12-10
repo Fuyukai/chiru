@@ -3,7 +3,7 @@ from __future__ import annotations
 import abc
 import enum
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Literal, cast
+from typing import TYPE_CHECKING, Literal, TypeAlias, cast
 
 import attr
 import cattr
@@ -16,6 +16,9 @@ from chiru.models.embed import Embed
 if TYPE_CHECKING:
     from chiru.models.guild import Guild
     from chiru.models.message import Message
+else:
+    Message: TypeAlias[object] = object
+    Guild: TypeAlias[object] = object
 
 
 class ChannelType(enum.Enum):
@@ -77,7 +80,7 @@ class RawChannel(DiscordObject):
             converter.register_structure_hook(
                 klass,
                 cattr.gen.make_dict_structure_fn(
-                    klass,  # type: ignore, wtf mypy?
+                    klass,  # type: ignore  # wtf mypy?
                     converter,
                     _cattrs_forbid_extra_keys=False,
                 ),
@@ -113,6 +116,7 @@ class BaseChannel(RawChannel, StatefulMixin, metaclass=abc.ABCMeta):
     """
 
 
+@attr.s(kw_only=True)
 class AnyGuildChannel(BaseChannel, metaclass=abc.ABCMeta):
     """
     Base class for any channel that is within a guild.
@@ -125,6 +129,8 @@ class AnyGuildChannel(BaseChannel, metaclass=abc.ABCMeta):
     def guild(self) -> Guild:
         """
         The :class:`.Guild` for this channel.
+
+        :rtype: :class:`.Guild`
         """
 
         guild = self._client.object_cache.get_available_guild(self.guild_id)
@@ -199,6 +205,8 @@ class TextualChannel(BaseChannel):
 
         :param allowed_mentions: A :class:`.AllowedMentions` instance to control what this message
             is allowed to mention. For more information, see :ref:`allowed-mentions`.
+
+        :rtype: :class:`.Message`
         """
 
         return await self._client.http.send_message(

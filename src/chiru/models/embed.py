@@ -10,6 +10,10 @@ from cattr import Converter, override
 
 @attr.s(slots=True, kw_only=True)
 class EmbedFooter:
+    """
+    The footer for an embed. This displays directly at the bottom.
+    """
+
     #: The text within this footer.
     text: str = attr.ib()
 
@@ -22,6 +26,10 @@ class EmbedFooter:
 
 @attr.s(slots=True, kw_only=True)
 class EmbedImageOrVideo:
+    """
+    Common class for both image and video content.
+    """
+
     #: The proxy URL for this image or video, if any. Read-only.
     proxy_url: str | None = attr.ib(default=None)
 
@@ -34,18 +42,30 @@ class EmbedImageOrVideo:
 
 @attr.s(slots=True, kw_only=True)
 class EmbedImage(EmbedImageOrVideo):
+    """
+    A single image in an embed. This is shared between both the image and the thumbnail.
+    """
+
     #: The image URL for this image.
     url: str = attr.ib()
 
 
 @attr.s(slots=True, kw_only=True)
 class EmbedVideo(EmbedImageOrVideo):
+    """
+    A single clickthrough video for this embed.
+    """
+
     #: The video URL for this video, if any.
     url: str | None = attr.ib()
 
 
 @attr.s(slots=True, kw_only=True)
 class EmbedProvider:
+    """
+    It's a mystery.
+    """
+
     #: The name for this provider, if any.
     name: str | None = attr.ib()
 
@@ -55,6 +75,10 @@ class EmbedProvider:
 
 @attr.s(slots=True, kw_only=True)
 class EmbedAuthor:
+    """
+    The author for this embed, shown at the top of the embed.
+    """
+
     #: The name of the author.
     name: str = attr.ib()
 
@@ -70,6 +94,10 @@ class EmbedAuthor:
 
 @attr.s(slots=True, kw_only=True)
 class EmbedField:
+    """
+    A single key-value field for this embed, shown as a list below the image.
+    """
+
     #: The name of this field.
     name: str = attr.ib()
 
@@ -77,7 +105,7 @@ class EmbedField:
     value: str = attr.ib()
 
     #: If this field displays inline or not.
-    inline: bool = attr.ib(default=False)
+    inline: bool = attr.ib(default=True)
 
 
 @attr.s(slots=True, kw_only=True)
