@@ -201,6 +201,13 @@ class CachedEventParser:
         for member in members:
             guild.members._members[member.id] = member
 
+        raw_presences: list[Any] = event.body.get("presences", [])
+        presences = [self._make_presence_update(it, guild_id=guild.id) for it in raw_presences]
+        presences = [it for it in presences if it]
+
+        if presences:
+            yield BulkPresences(guild=guild, child_events=presences)
+
         evt = GuildMemberChunk(
             guild=guild,
             members=members,
@@ -215,13 +222,14 @@ class CachedEventParser:
         yield evt
 
     def _make_presence_update(
-        self, data: Mapping[str, Any],
+        self,
+        data: Mapping[str, Any],
         guild_id: int | None = None,
     ) -> PresenceUpdate | None:
         # ugh, le eventual consistency has arrived
         # a fun history lesson: this was the only consistent event for getting user data
-        # as guild_member_update would just not be fucking fired randomly. 
-        # it was also sent to turn recently removed members offline[1] (lol)?  
+        # as guild_member_update would just not be fucking fired randomly.
+        # it was also sent to turn recently removed members offline[1] (lol)?
         #
         # sadly, it seems like they removed the ``nick`` and ``roles`` field from the docs, and
         # whilst they still exist in the packet I don't really wish to rely on them.
@@ -237,31 +245,33 @@ class CachedEventParser:
             except (ValueError, KeyError):
                 # le sigh
                 return None
-            
+
         guild = self._cache.get_available_guild(guild_id)
         if not guild:
             return None
-        
+
         try:
             member_id = int(data["user"]["id"])
         except (KeyError, ValueError):
             # I've had payloads with this missing before [2]
             return None
-        
+
         # bail the fuck out
         status: str | None = data.get("status")
         if not status:
             return None
-        
+
         raw_activities: list[Any] = data.get("activities", [])
         activities = CONVERTER.structure(raw_activities, list[Activity])
         presence = Presence(status=status, activities=activities)
         return PresenceUpdate(guild=guild, user_id=member_id, presence=presence)
-        
+
     def _parse_presence_update(
-        self, event: GatewayDispatch, factory: ModelObjectFactory,
+        self,
+        event: GatewayDispatch,
+        factory: ModelObjectFactory,
     ) -> Iterable[DispatchedEvent]:
-        if (presence := self._make_presence_update(event.body)):
+        if presence := self._make_presence_update(event.body):
             yield presence
 
     def _parse_guild_member_add(

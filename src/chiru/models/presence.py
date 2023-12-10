@@ -1,15 +1,14 @@
-
-
 import enum
 
 import attr
 import cattr
 from cattr import Converter
 
-from chiru.models.emoji import Emoji, RawCustomEmoji
+from chiru.models.emoji import Emoji
 
 # a minimum possible effort object as the primary purpose is literally just tracking statuses
 # and status names. i might come back to this in the future but not for now.
+
 
 class ActivityType(enum.IntEnum):
     GAME = 0
@@ -50,9 +49,10 @@ class Presence:
             converter.register_structure_hook(
                 klass,
                 cattr.gen.make_dict_structure_fn(
-                    klass, converter,
+                    klass,
+                    converter,
                     _cattrs_forbid_extra_keys=False,
-                )
+                ),
             )
 
     #: The current computed status for this member.

@@ -356,13 +356,18 @@ class PresenceUpdate(DispatchedEvent):
 @attr.s(slots=True, frozen=True, kw_only=True)
 class BulkPresences(DispatchedEvent):
     """
-    Published when a guild is joined and contains data about all the presences for the members 
-    within.
+    Published when a large chunk of presences is received. This is published in one of three
+    situations:
+
+    1. When a new guild is joined (i.e. after a ``GUILD_JOINED``, ``GUILD_STREAMED``, or
+       ``GUILD_AVAILABLE``).
+    2. When a guild member chunk is received.
+    3. (Rarely) when the (undocumented) ``PRESENCES_REPLACE`` event is received.
     """
 
     #: The guild that this is a set of presences for.
     guild: Guild = attr.ib()
 
     #: The collection of :class:`.PresenceUpdate` events that were created from the newly joined
-    #: guild.
+    #: guild. This will always be non-empty.
     child_events: Collection[PresenceUpdate] = attr.ib()
