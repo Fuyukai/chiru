@@ -109,6 +109,8 @@ class ModelObjectFactory:
 
         return obb
 
+    # this is a gross static type trick.
+    # ``from_guild`` is always True if ``guild_id`` is in the channel data.
     @overload
     def make_channel(
         self,
@@ -130,6 +132,8 @@ class ModelObjectFactory:
         """
 
         type: ChannelType = ChannelType(channel_data["type"])
+        guild_id: str | None = channel_data.get("guild_id")
+        from_guild = from_guild or guild_id is not None
 
         obb: BaseChannel
         match type:
@@ -141,6 +145,9 @@ class ModelObjectFactory:
                     obb = CONVERTER.structure(channel_data, UnsupportedGuildChannel)
                 else:
                     obb = CONVERTER.structure(channel_data, UnsupportedChannel)
+
+        if guild_id:
+            obb.guild_id = int(guild_id)
 
         obb._chiru_set_client(bot=self._client)
         return obb
