@@ -40,6 +40,7 @@ trio = ">=0.23.0"
 ruff = ">=0.1.6"
 mypy = ">=1.7.1"
 pyright = ">=1.1.339"
+pytest = "^7.4.3"
 
 
 [tool.poetry.group.docs.dependencies]

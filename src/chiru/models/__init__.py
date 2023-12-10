@@ -8,6 +8,7 @@ from chiru.models.channel import (
     TextualChannel as TextualChannel,
     TextualGuildChannel as TextualGuildChannel,
     UnsupportedChannel as UnsupportedChannel,
+    UnsupportedGuildChannel as UnsupportedGuildChannel,
 )
 from chiru.models.embed import (
     Embed as Embed,

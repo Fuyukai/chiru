@@ -16,7 +16,10 @@ from chiru.event.model import (
     GuildMemberUpdate as GuildMemberUpdate,
     GuildStreamed as GuildStreamed,
     InvalidGuildChunk as InvalidGuildChunk,
+    MessageBulkDelete as MessageBulkDelete,
     MessageCreate as MessageCreate,
+    MessageDelete as MessageDelete,
+    MessageUpdate as MessageUpdate,
     Ready as Ready,
     ShardReady as ShardReady,
 )

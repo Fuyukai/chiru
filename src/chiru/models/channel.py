@@ -111,11 +111,10 @@ class RawChannel(DiscordObject):
     #: has no messages in it.
     #:
     #: .. warning::
-    #:      
+    #:
     #:      This may not be a valid message ID if the most recent message was deleted. Consider it
     #:      a cursor rather than absolute truth.
     last_message_id: int | None = attr.ib(default=None)
-
 
 
 @attr.s(kw_only=True)
