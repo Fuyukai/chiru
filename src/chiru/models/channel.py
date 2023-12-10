@@ -91,7 +91,7 @@ class RawChannel(DiscordObject):
     type: ChannelType = attr.ib()
 
     #: The name of this channel, if any.
-    name: str | None = attr.ib()
+    name: str | None = attr.ib(default=None)
 
     #: The guild ID for this channel, if any.
     guild_id: int | None = attr.ib(default=None)
