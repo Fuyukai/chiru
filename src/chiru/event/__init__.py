@@ -5,6 +5,8 @@ from chiru.event.dispatcher import (
     create_stateful_dispatcher as create_stateful_dispatcher,
 )
 from chiru.event.model import (
+    ChannelCreate as ChannelCreate,
+    ChannelUpdate as ChannelUpdate,
     Connected as Connected,
     DispatchedEvent as DispatchedEvent,
     GuildAvailable as GuildAvailable,
