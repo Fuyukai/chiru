@@ -89,20 +89,21 @@ class GuildMemberList(Mapping[int, Member]):
 
         return GuildMemberList(members=members, guild_id=guild_id)
 
-    def _backfill_member_data(
+    def _update_member_data(
         self,
         factory: ModelObjectFactory,
         member_data: Mapping[str, Any],
         user: User | None = None,
-    ) -> Member:
+    ) -> tuple[Member | None, Member]:
         """
-        Backfills member data from the provided dict.
+        Backfills member data from the provided dict. Returns a tuple of (old | None, new) members.
         """
 
         new_member = factory.make_member(member_data, user)
         new_member.guild_id = self._guild_id
+        old_member = self._members.get(new_member.id)
         self._members[new_member.id] = new_member
-        return new_member
+        return (old_member, new_member)
 
     def __getitem__(self, __key: int) -> Member:
         return self._members[__key]

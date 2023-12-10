@@ -161,6 +161,9 @@ class GuildMemberUpdate(DispatchedEvent):
     Published when a member updates information about their profile in a guild.
     """
 
+    #: The old member that was replaced, if any.
+    old_member: Member | None = attr.ib()
+
     #: The member that was updated.
     member: Member = attr.ib()
 

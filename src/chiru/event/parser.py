@@ -204,7 +204,7 @@ class CachedEventParser:
         guild_id = int(event.body["guild_id"])
         guild = self._cache.get_available_guild(guild_id)
         assert guild, "STOP SENDING US INVALID GUILDS"
-        member = guild.members._backfill_member_data(factory, event.body)
+        _, member = guild.members._update_member_data(factory, event.body)
 
         yield GuildMemberAdd(guild=member.guild, member=member)
 
@@ -224,8 +224,8 @@ class CachedEventParser:
         guild = self._cache.get_available_guild(guild_id)
 
         assert guild, "received member update for an invalid guild!"
-        created_member = guild.members._backfill_member_data(factory, event.body)
-        yield GuildMemberUpdate(member=created_member)
+        old, created_member = guild.members._update_member_data(factory, event.body)
+        yield GuildMemberUpdate(old_member=old, member=created_member)
 
     def _parse_guild_emojis_update(
         self, event: GatewayDispatch, factory: ModelObjectFactory
@@ -287,9 +287,9 @@ class CachedEventParser:
                 # kinda jank field. this is a user object with an additional "member" field.
                 mention_member = mention.pop("member")
                 mention_user = factory.make_user(mention)
-                guild.members._backfill_member_data(factory, mention_member, mention_user)
+                guild.members._update_member_data(factory, mention_member, mention_user)
 
-            guild.members._backfill_member_data(factory, event.body["member"], message.raw_author)
+            guild.members._update_member_data(factory, event.body["member"], message.raw_author)
 
         yield MessageCreate(message=message)
 
