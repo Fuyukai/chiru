@@ -98,6 +98,12 @@ class ModelObjectFactory:
         obb = CONVERTER.structure(message_data, Message)
         obb._chiru_set_client(self._client)
 
+        if obb.guild_id is None:
+            channel = self.object_cache.find_channel(obb.channel_id)
+
+            if channel and isinstance(channel, AnyGuildChannel):
+                obb.guild_id = channel.id
+
         # fill child fields
         obb.raw_author._chiru_set_client(bot=self._client)
 
