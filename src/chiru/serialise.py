@@ -9,6 +9,7 @@ from chiru.models.guild import RawGuild
 from chiru.models.member import RawMember
 from chiru.models.message import RawMessage
 from chiru.models.oauth import OAuthApplication
+from chiru.models.presence import Presence
 from chiru.models.user import RawUser
 
 
@@ -38,6 +39,7 @@ def create_chiru_converter() -> Converter:
     RawGuild.configure_converter(converter)
     RawCustomEmoji.configure_converter(converter)
     OAuthApplication.configure_converter(converter)
+    Presence.configure_converter(converter)
 
     return converter
 

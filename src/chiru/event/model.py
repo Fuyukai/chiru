@@ -1,4 +1,4 @@
-from collections.abc import Iterable
+from collections.abc import Collection, Iterable
 from typing import final
 
 import attr
@@ -8,6 +8,7 @@ from chiru.models.emoji import RawCustomEmoji
 from chiru.models.guild import Guild
 from chiru.models.member import Member
 from chiru.models.message import Message
+from chiru.models.presence import Presence
 from chiru.models.user import User
 
 __all__ = (
@@ -333,3 +334,35 @@ class ChannelDelete(DispatchedEvent):
 
     #: The raw channel object that was carried along with the dispatched ``CHANNEL_DELETE`` event.
     dispatch_channel: RawChannel = attr.ib()
+
+
+@attr.s(slots=True, frozen=True, kw_only=True)
+@final
+class PresenceUpdate(DispatchedEvent):
+    """
+    Published a single member's presence changes.
+    """
+
+    #: The :class:`.Guild` that this event was received in.
+    guild: Guild = attr.ib()
+
+    #: The ID of the user that this presence was for.
+    user_id: int = attr.ib()
+
+    #: The new presence for the member.
+    presence: Presence = attr.ib()
+
+
+@attr.s(slots=True, frozen=True, kw_only=True)
+class BulkPresences(DispatchedEvent):
+    """
+    Published when a guild is joined and contains data about all the presences for the members 
+    within.
+    """
+
+    #: The guild that this is a set of presences for.
+    guild: Guild = attr.ib()
+
+    #: The collection of :class:`.PresenceUpdate` events that were created from the newly joined
+    #: guild.
+    child_events: Collection[PresenceUpdate] = attr.ib()

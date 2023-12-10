@@ -1,4 +1,4 @@
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from typing import TYPE_CHECKING, Any
 
 import attr
@@ -7,6 +7,7 @@ import structlog
 from chiru.cache import ObjectCache
 from chiru.event.chunker import GuildChunker
 from chiru.event.model import (
+    BulkPresences,
     ChannelCreate,
     ChannelDelete,
     ChannelUpdate,
@@ -25,6 +26,7 @@ from chiru.event.model import (
     MessageCreate,
     MessageDelete,
     MessageUpdate,
+    PresenceUpdate,
     ShardReady,
 )
 from chiru.gateway.event import GatewayDispatch
@@ -32,6 +34,7 @@ from chiru.models.channel import AnyGuildChannel, BaseChannel, RawChannel
 from chiru.models.factory import ModelObjectFactory
 from chiru.models.guild import GuildEmojis, UnavailableGuild
 from chiru.models.member import Member
+from chiru.models.presence import Activity, Presence
 from chiru.serialise import CONVERTER
 
 if TYPE_CHECKING:
@@ -164,6 +167,15 @@ class CachedEventParser:
             else:
                 yield GuildAvailable(created_guild)
 
+        raw_presences: list[Any] = event.body.get("presences", [])
+        presences = [
+            self._make_presence_update(it, guild_id=created_guild.id) for it in raw_presences
+        ]
+        presences = [it for it in presences if it]
+
+        if presences:
+            yield BulkPresences(guild=created_guild, child_events=presences)
+
         if self._chunker is not None:
             self._chunker.handle_joined_guild(event.shard_id, created_guild)
 
@@ -201,6 +213,56 @@ class CachedEventParser:
             self._chunker.handle_member_chunk(event.shard_id, evt)
 
         yield evt
+
+    def _make_presence_update(
+        self, data: Mapping[str, Any],
+        guild_id: int | None = None,
+    ) -> PresenceUpdate | None:
+        # ugh, le eventual consistency has arrived
+        # a fun history lesson: this was the only consistent event for getting user data
+        # as guild_member_update would just not be fucking fired randomly. 
+        # it was also sent to turn recently removed members offline[1] (lol)?  
+        #
+        # sadly, it seems like they removed the ``nick`` and ``roles`` field from the docs, and
+        # whilst they still exist in the packet I don't really wish to rely on them.
+        # anyway, this event apparently has nothing but fucking opttional fields so we bail out
+        # if any of (guild, user->id, status) are missing.
+        #
+        # [1] https://github.com/Fuyukai/curious/pull/30
+        # [2] https://i.imgur.com/aA4UpTb.png
+
+        if guild_id is None:
+            try:
+                guild_id = int(data["guild_id"])
+            except (ValueError, KeyError):
+                # le sigh
+                return None
+            
+        guild = self._cache.get_available_guild(guild_id)
+        if not guild:
+            return None
+        
+        try:
+            member_id = int(data["user"]["id"])
+        except (KeyError, ValueError):
+            # I've had payloads with this missing before [2]
+            return None
+        
+        # bail the fuck out
+        status: str | None = data.get("status")
+        if not status:
+            return None
+        
+        raw_activities: list[Any] = data.get("activities", [])
+        activities = CONVERTER.structure(raw_activities, list[Activity])
+        presence = Presence(status=status, activities=activities)
+        return PresenceUpdate(guild=guild, user_id=member_id, presence=presence)
+        
+    def _parse_presence_update(
+        self, event: GatewayDispatch, factory: ModelObjectFactory,
+    ) -> Iterable[DispatchedEvent]:
+        if (presence := self._make_presence_update(event.body)):
+            yield presence
 
     def _parse_guild_member_add(
         self, event: GatewayDispatch, factory: ModelObjectFactory
