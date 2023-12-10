@@ -293,3 +293,13 @@ class ChannelCreate(DispatchedEvent):
 
     #: The newly created :class:`.BaseChannel`.
     channel: BaseChannel = attr.ib()
+
+
+@attr.s(slots=True, frozen=True, kw_only=True)
+class ChannelUpdate(DispatchedEvent):
+    """
+    Published when a single channel is updated.
+    """
+
+    #: The updated :class:`.BaseChannel`.
+    channel: BaseChannel = attr.ib()
