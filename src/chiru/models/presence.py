@@ -39,7 +39,7 @@ class Activity:
 
     #: The emoji for this activity, if any.
     emoji: Emoji | None = attr.ib(default=None)
-    
+
     @classmethod
     def custom(cls, text: str, *, url: str | None = None):
         """

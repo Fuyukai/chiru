@@ -35,4 +35,11 @@ from chiru.models.guild import (
 from chiru.models.member import Member as Member, RawMember as RawMember
 from chiru.models.message import Message as Message, MessageType as MessageType
 from chiru.models.oauth import OAuthApplication as OAuthApplication
+from chiru.models.presence import (
+    Activity as Activity,
+    ActivityType as ActivityType,
+    Presence as Presence,
+    PresenceStatus as PresenceStatus,
+    SendablePresenceStatus as SendablePresenceStatus,
+)
 from chiru.models.user import RawUser as RawUser, User as User

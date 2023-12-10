@@ -5,6 +5,7 @@ from chiru.event.dispatcher import (
     create_stateful_dispatcher as create_stateful_dispatcher,
 )
 from chiru.event.model import (
+    BulkPresences as BulkPresences,
     ChannelCreate as ChannelCreate,
     ChannelDelete as ChannelDelete,
     ChannelUpdate as ChannelUpdate,
@@ -23,6 +24,7 @@ from chiru.event.model import (
     MessageCreate as MessageCreate,
     MessageDelete as MessageDelete,
     MessageUpdate as MessageUpdate,
+    PresenceUpdate as PresenceUpdate,
     Ready as Ready,
     ShardReady as ShardReady,
 )

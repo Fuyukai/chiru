@@ -10,6 +10,7 @@ from chiru.gateway.event import (
     GatewayHello as GatewayHello,
     GatewayInvalidateSession as GatewayInvalidateSession,
     GatewayMemberChunkRequest as GatewayMemberChunkRequest,
+    GatewayPresenceUpdate as GatewayPresenceUpdate,
     GatewayReconnectRequested as GatewayReconnectRequested,
     IncomingGatewayEvent as IncomingGatewayEvent,
     OutgoingGatewayEvent as OutgoingGatewayEvent,
