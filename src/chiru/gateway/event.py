@@ -10,8 +10,8 @@ class OutgoingGatewayEvent:
     """
 
 
-@final
 @attr.s(frozen=True, slots=True, kw_only=True)
+@final
 class GatewayMemberChunkRequest(OutgoingGatewayEvent):
     """
     Requests the member chunk for the provided guild. One of :attr:`.user_ids` or :attr:`.query`
@@ -56,8 +56,8 @@ class IncomingGatewayEvent:
     shard_id: int = attr.ib()
 
 
-@final
 @attr.s(frozen=True, slots=True, kw_only=True)
+@final
 class GatewayHello(IncomingGatewayEvent):
     """
     The HELLO event from the gateway. This is a :ref:`voidable <voidable-events>` event.
@@ -67,8 +67,8 @@ class GatewayHello(IncomingGatewayEvent):
     heartbeat_interval: float = attr.ib()
 
 
-@final
 @attr.s(frozen=True, slots=True, kw_only=True)
+@final
 class GatewayReconnectRequested(IncomingGatewayEvent):
     """
     Published when the gateway has a reconnect requested by the other side. This is a
@@ -76,8 +76,8 @@ class GatewayReconnectRequested(IncomingGatewayEvent):
     """
 
 
-@final
 @attr.s(frozen=True, slots=True, kw_only=True)
+@final
 class GatewayHeartbeatSent(IncomingGatewayEvent):
     """
     Published when the gateway is sending a heartbeat. This is a :ref:`voidable <voidable-events>`
@@ -91,8 +91,8 @@ class GatewayHeartbeatSent(IncomingGatewayEvent):
     sequence: int = attr.ib()
 
 
-@final
 @attr.s(frozen=True, slots=True, kw_only=True)
+@final
 class GatewayHeartbeatAck(IncomingGatewayEvent):
     """
     Published when the gateway has received a heartbeat ack. This is a
@@ -103,8 +103,8 @@ class GatewayHeartbeatAck(IncomingGatewayEvent):
     heartbeat_ack_count: int = attr.ib()
 
 
-@final
 @attr.s(frozen=True, slots=True, kw_only=True)
+@final
 class GatewayInvalidateSession(IncomingGatewayEvent):
     """
     Published when our IDENTIFY or RESUME failed. This is a :ref:`voidable <voidable-events>` event.
@@ -114,8 +114,8 @@ class GatewayInvalidateSession(IncomingGatewayEvent):
     resumable: bool = attr.ib()
 
 
-@final
 @attr.s(frozen=True, slots=True, kw_only=True)
+@final
 class GatewayDispatch(IncomingGatewayEvent):
     """
     A single dispatch event from the gateway.
