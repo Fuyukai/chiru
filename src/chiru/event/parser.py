@@ -30,6 +30,7 @@ from chiru.gateway.event import GatewayDispatch
 from chiru.models.channel import AnyGuildChannel, BaseChannel
 from chiru.models.factory import ModelObjectFactory
 from chiru.models.guild import GuildEmojis, UnavailableGuild
+from chiru.models.member import Member
 
 if TYPE_CHECKING:
     pass
@@ -204,6 +205,7 @@ class CachedEventParser:
         guild_id = int(event.body["guild_id"])
         guild = self._cache.get_available_guild(guild_id)
         assert guild, "STOP SENDING US INVALID GUILDS"
+        guild.member_count += 1
         _, member = guild.members._update_member_data(factory, event.body)
 
         yield GuildMemberAdd(guild=member.guild, member=member)
@@ -215,7 +217,17 @@ class CachedEventParser:
         guild = self._cache.get_available_guild(guild_id)
         user = factory.make_user(event.body["user"])
 
-        yield GuildMemberRemove(guild_id=guild_id, user=user, guild=guild)
+        old_member: Member | None = None
+        if guild is not None:
+            old_member = guild.members._members.pop(user.id, None)
+            guild.member_count -= 1
+
+        yield GuildMemberRemove(
+            guild_id=guild_id, 
+            user=user, 
+            cached_member=old_member,
+            guild=guild
+        )
 
     def _parse_guild_member_update(
         self, event: GatewayDispatch, factory: ModelObjectFactory

@@ -150,6 +150,10 @@ class GuildMemberRemove(DispatchedEvent):
     #: The user data for the user that was just removed.
     user: User = attr.ib()
 
+    #: If the provided member was cached, then the :class:`.Member` object that was previously
+    #: cached.
+    cached_member: Member | None = attr.ib()
+
     #: The guild object that the user was removed from, if it is available.
     guild: Guild | None = attr.ib()
 
