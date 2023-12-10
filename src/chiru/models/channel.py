@@ -13,6 +13,7 @@ from chiru.exc import HttpApiRequestError
 from chiru.mentions import AllowedMentions
 from chiru.models.base import DiscordObject, StatefulMixin
 from chiru.models.embed import Embed
+from chiru.models.user import RawUser, User
 
 if TYPE_CHECKING:
     from chiru.models.guild import Guild
@@ -77,6 +78,7 @@ class RawChannel(DiscordObject):
             UnsupportedChannel,
             UnsupportedGuildChannel,
             CategoryChannel,
+            DirectMessageChannel,
         ):
             converter.register_structure_hook(
                 klass,
@@ -107,6 +109,10 @@ class RawChannel(DiscordObject):
 
     #: If this channel is NSFW or not. Defaults to False.
     nsfw: bool = attr.ib(default=False)
+
+    #: The list of recipients for this channel. This will be empty if this is not a direct message
+    #: channel.
+    recipients: list[RawUser] = attr.ib(factory=list)
 
     #: The ID of the last message that was sent in this channel. This may be None if the channel
     #: has no messages in it.
@@ -246,6 +252,27 @@ class TextualChannel(BaseChannel):
             allowed_mentions=allowed_mentions,
             factory=self._client.stateful_factory,
         )
+
+
+@attr.s(kw_only=True)
+class DirectMessageChannel(TextualChannel):
+    """
+    A channel that acts as a direct message to another user.
+    """
+
+    type: Literal[ChannelType.DM] = attr.ib()
+
+    #: The list of recipients to this channel.
+    recipients: list[User] = attr.ib()
+
+    @property
+    def other_user(self) -> User:
+        """
+        Gets the other user in this direct message.
+        """
+
+        assert len(self.recipients) == 1, "naughty userbot..."
+        return self.recipients[0]
 
 
 @attr.s(kw_only=True)

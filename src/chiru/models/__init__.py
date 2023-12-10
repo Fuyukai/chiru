@@ -4,6 +4,7 @@ from chiru.models.channel import (
     BaseChannel as BaseChannel,
     CategoryChannel as CategoryChannel,
     ChannelType as ChannelType,
+    DirectMessageChannel as DirectMessageChannel,
     RawChannel as RawChannel,
     TextualChannel as TextualChannel,
     TextualGuildChannel as TextualGuildChannel,

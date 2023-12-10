@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from functools import partial
 from typing import TYPE_CHECKING, Any, Literal, TypeVar, overload
 
 from chiru.cache import ObjectCache
@@ -8,6 +9,7 @@ from chiru.models.channel import (
     AnyGuildChannel,
     BaseChannel,
     ChannelType,
+    DirectMessageChannel,
     TextualGuildChannel,
     UnsupportedChannel,
     UnsupportedGuildChannel,
@@ -134,17 +136,21 @@ class ModelObjectFactory:
         type: ChannelType = ChannelType(channel_data["type"])
         guild_id: str | None = channel_data.get("guild_id")
         from_guild = from_guild or guild_id is not None
+        fn = partial(CONVERTER.structure, channel_data)
 
         obb: BaseChannel
         match type:
+            case ChannelType.DM:
+                obb = fn(DirectMessageChannel)
+
+                for recipient in obb.recipients:
+                    recipient._chiru_set_client(bot=self._client)
+
             case ChannelType.GUILD_TEXT:
-                obb = CONVERTER.structure(channel_data, TextualGuildChannel)
+                obb = fn(TextualGuildChannel)
 
             case _:
-                if from_guild:
-                    obb = CONVERTER.structure(channel_data, UnsupportedGuildChannel)
-                else:
-                    obb = CONVERTER.structure(channel_data, UnsupportedChannel)
+                obb = fn(UnsupportedGuildChannel) if from_guild else fn(UnsupportedChannel)
 
         if guild_id:
             obb.guild_id = int(guild_id)
