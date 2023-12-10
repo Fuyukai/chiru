@@ -2,12 +2,14 @@ import importlib
 
 import pytest
 from chiru.event.model import DispatchedEvent
+from chiru.gateway.event import OutgoingGatewayEvent
 from chiru.models.base import DiscordObject
 
 
 @pytest.mark.parametrize(
     "namespace,exported,parent",
     [
+        ("chiru.gateway", "chiru.gateway.event", OutgoingGatewayEvent),
         ("chiru.event", "chiru.event.model", DispatchedEvent),
         ("chiru.models", "chiru.models.channel", DiscordObject),
     ]
