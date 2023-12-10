@@ -221,7 +221,6 @@ class CachedEventParser:
         event: GatewayDispatch,
         factory: ModelObjectFactory,
     ) -> Iterable[DispatchedEvent]:
-        print(event.body)
         message = factory.make_message(event.body)
 
         yield MessageUpdate(message=message)
