@@ -166,13 +166,13 @@ class UnsupportedGuildChannel(UnsupportedChannel, AnyGuildChannel):
 @attr.s(kw_only=True)
 class CategoryChannel(AnyGuildChannel):
     """
-    A channel that contains
+    A channel that contains other channels.
     """
 
     type: Literal[ChannelType.GUILD_CATEGORY] = attr.ib()
 
     @property
-    def children(self) -> Iterable[BaseChannel]:
+    def children(self) -> Iterable[AnyGuildChannel]:
         """
         An iterable of the channels that this category owns.
         """
