@@ -1,8 +1,9 @@
+from collections.abc import Iterable
 from typing import final
 
 import attr
 
-from chiru.models.channel import TextualChannel
+from chiru.models.channel import BaseChannel, TextualChannel
 from chiru.models.emoji import RawCustomEmoji
 from chiru.models.guild import Guild
 from chiru.models.member import Member
@@ -224,3 +225,60 @@ class MessageUpdate(DispatchedEvent):
         """
 
         return self.message.channel
+
+
+@attr.s(slots=True, frozen=True, kw_only=True)
+@final
+class MessageDelete(DispatchedEvent):
+    """
+    Published when a single message is deleted within a channel.
+    """
+
+    #: The ID of the message that was deleted.
+    message_id: int = attr.ib()
+
+    #: The channel that the message was deleted from.
+    channel: BaseChannel = attr.ib()
+
+    #: The guild that the message was deleted from, if any.
+    guild: Guild | None = attr.ib()
+
+
+@attr.s(slots=True, frozen=True, kw_only=True)
+@final
+class MessageBulkDelete(DispatchedEvent):
+    """
+    Published when multiple messages are deleted simultaneously in a single channel.
+    """
+
+    #: The list of IDs of the deleted messages.
+    messages: list[int] = attr.ib()
+
+    #: The ID of the channel that the messages were deleted from.
+    channel: BaseChannel = attr.ib()
+
+    #: The ID of the guild that the messages were deleted from, if any.
+    guild: Guild | None = attr.ib()
+
+    def as_single_events(self) -> Iterable[DispatchedEvent]:
+        """
+        Returns a generator that yields every message in this event as a single
+        :class:`.MessageDelete` event. This allows unifiying the code paths for both individual and
+        bulk deletions, like so:
+
+        .. code-block:: python
+
+            async def handle_single_deletion(ctx: EventContext, evt: MessageDelete) -> None:
+                ...
+
+            async def handle_bulk_deletion(ctx: EventContext, e: MessageBulkDelete) -> None:
+                for evt in e.as_single_events():
+                    await handle_single_deletion(ctx, evt)
+
+            dispatcher.add_event_handler(MessageDelete, handle_single_deletion)
+            dispatcher.add_event_handler(MessageBulkDelete, handle_bulk_deletion)
+
+        """
+
+        for id in self.messages:
+            yield MessageDelete(message_id=id, channel=self.channel, guild=self.guild)

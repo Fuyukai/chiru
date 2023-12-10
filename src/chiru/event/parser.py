@@ -18,7 +18,9 @@ from chiru.event.model import (
     GuildMemberUpdate,
     GuildStreamed,
     InvalidGuildChunk,
+    MessageBulkDelete,
     MessageCreate,
+    MessageDelete,
     MessageUpdate,
     ShardReady,
 )
@@ -215,6 +217,42 @@ class CachedEventParser:
             guild.members._backfill_member_data(factory, event.body["member"], message.raw_author)
 
         yield MessageCreate(message=message)
+
+    def _parse_message_delete(
+        self,
+        event: GatewayDispatch,
+        factory: ModelObjectFactory,
+    ) -> Iterable[DispatchedEvent]:
+        guild_id: int | None = None
+        if "guild_id" in event.body:
+            guild_id = int(event.body["guild_id"])
+
+        guild = self._cache.get_available_guild(guild_id) if guild_id else None
+        channel = self._cache.find_channel(int(event.body["channel_id"]))
+        assert channel, "die discord"
+
+        yield MessageDelete(
+            message_id=int(event.body["id"]),
+            channel=channel,
+            guild=guild,
+        )
+
+    def _parse_message_delete_bulk(
+        self, event: GatewayDispatch, factory: ModelObjectFactory
+    ) -> Iterable[DispatchedEvent]:
+        guild_id: int | None = None
+        if "guild_id" in event.body:
+            guild_id = int(event.body["guild_id"])
+
+        guild = self._cache.get_available_guild(guild_id) if guild_id else None
+        channel = self._cache.find_channel(int(event.body["channel_id"]))
+        assert channel, "die discord"
+
+        yield MessageBulkDelete(
+            messages=list(map(int, event.body["ids"])),
+            channel=channel,
+            guild=guild,
+        )
 
     @staticmethod
     def _parse_message_update(
