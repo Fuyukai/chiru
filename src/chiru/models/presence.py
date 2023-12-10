@@ -39,6 +39,19 @@ class Activity:
 
     #: The emoji for this activity, if any.
     emoji: Emoji | None = attr.ib(default=None)
+    
+    @classmethod
+    def custom(cls, text: str, *, url: str | None = None):
+        """
+        Shortcut method for creating a new custom activity.
+        """
+
+        return Activity(
+            name="Custom Status",
+            state=text,
+            type=ActivityType.CUSTOM,
+            url=url,
+        )
 
 
 @attr.s(slots=True, kw_only=True)
