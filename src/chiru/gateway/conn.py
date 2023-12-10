@@ -222,8 +222,6 @@ class GatewaySenderWrapper:
             },
         }
 
-        print(body)
-
         await self._ws.send_message(json.dumps(body))
 
 
