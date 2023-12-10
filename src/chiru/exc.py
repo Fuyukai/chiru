@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -25,6 +24,7 @@ class HttpApiError(DiscordError):
 
 # TODO: Parse the sub-errors out into an ExceptionGroup?
 
+
 @attr.s(slots=True, str=True)
 class HttpApiRequestError(HttpApiError):
     """
@@ -32,11 +32,7 @@ class HttpApiRequestError(HttpApiError):
     """
 
     @classmethod
-    def from_response(
-        cls, 
-        status_code: int,
-        body: Mapping[str, Any]
-    ) -> HttpApiError:
+    def from_response(cls, status_code: int, body: Mapping[str, Any]) -> HttpApiError:
         """
         Creates a new :class:`.HttpApiError` or appropriate subclass from the provided response.
         """
@@ -49,7 +45,7 @@ class HttpApiRequestError(HttpApiError):
         return HttpApiRequestError(
             status_code=status_code, error_code=code, error_message=message, errors=errors
         )
-    
+
     #: The actual error code for this HTTP response.
     error_code: int = attr.ib()
 

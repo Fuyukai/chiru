@@ -31,6 +31,7 @@ from chiru.serialise import CONVERTER
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger(name=__name__)
 
+
 class Endpoints:
     """
     Contains all of the endpoints used by the HTTP client.
@@ -213,7 +214,7 @@ class ChiruHttpClient:
                     raise HttpApiRequestError.from_response(
                         status_code=response.status_code, body=response.json()
                     )
-            
+
                 raise HttpApiError(status_code=response.status_code)
 
         raise DiscordError("Failed to get a valid response after five tries.")
@@ -235,6 +236,44 @@ class ChiruHttpClient:
         resp = await self.request(bucket="oauth2:me", method="GET", path=Endpoints.OAUTH2_ME)
 
         return CONVERTER.structure(resp.json(), OAuthApplication)
+
+    @overload
+    async def get_message(self, *, channel_id: int, message_id: int) -> RawMessage: ...
+
+    @overload
+    async def get_message(
+        self, *, channel_id: int, message_id: int, factory: ModelObjectFactory
+    ) -> Message: ...
+
+    async def get_message(
+        self,
+        *,
+        channel_id: int,
+        message_id: int,
+        factory: ModelObjectFactory | None = None,
+    ) -> RawMessage | Message:
+        """
+        Gets a single message from a channel.
+
+        :param channel_id: The ID of the channel to get the message from.
+        :param message_id: The ID of the individual message to retrieve from the channel.
+        :param factory: The object factory to create stateful messages from.
+        :return: A :class:`.Message` if a :class:`.ModelObjectFactory` was provided; otherwise,
+            a :class:`.RawMessage` representing the created message object returned from Discord.
+        """
+
+        resp = await self.request(
+            bucket=f"get-messages:${channel_id}",
+            method="GET",
+            path=Endpoints.CHANNEL_INDIVIDUAL_MESSAGE.format(
+                channel_id=channel_id, message_id=message_id
+            ),
+        )
+
+        if factory is not None:
+            return factory.make_message(resp.json())
+
+        return CONVERTER.structure(resp.json(), RawMessage)
 
     # TODO: Interactions.
     @overload

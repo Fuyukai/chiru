@@ -9,8 +9,9 @@ import attr
 import cattr
 from cattr import Converter
 
+from chiru.exc import HttpApiRequestError
 from chiru.mentions import AllowedMentions
-from chiru.models.base import DiscordObject, StatefulMixin
+from chiru.models.base import DiscordObject, Snowflake, StatefulMixin
 from chiru.models.embed import Embed
 
 if TYPE_CHECKING:
@@ -196,6 +197,26 @@ class TextualChannel(BaseChannel):
     """
     The base type for a channel that can have messages to sent to it.
     """
+
+    async def get_single_message(
+        self,
+        message_id: Snowflake,
+    ) -> Message | None:
+        """
+        Gets a single message in this channel by ID, or None if there is no such message.
+        """
+
+        try:
+            return await self._client.http.get_message(
+                channel_id=self.id,
+                message_id=int(message_id),
+                factory=self._client.stateful_factory,
+            )
+        except HttpApiRequestError as e:
+            if e.error_code == 10008:
+                return None
+
+            raise
 
     async def send_message(
         self,

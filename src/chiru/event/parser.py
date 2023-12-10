@@ -196,8 +196,7 @@ class CachedEventParser:
         yield evt
 
     def _parse_message_create(
-        self,
-        event: GatewayDispatch, factory: ModelObjectFactory
+        self, event: GatewayDispatch, factory: ModelObjectFactory
     ) -> Iterable[DispatchedEvent]:
         message = factory.make_message(event.body)
 
