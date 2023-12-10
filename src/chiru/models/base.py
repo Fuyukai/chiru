@@ -42,6 +42,9 @@ class DiscordObject:
             return NotImplemented
 
         return id == __value.id
+    
+    def __int__(self) -> int:
+        return self.id
 
 
 @attr.s(kw_only=True)
