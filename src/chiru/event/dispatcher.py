@@ -10,6 +10,7 @@ import structlog
 from bitarray.util import zeros
 
 from chiru.bot import ChiruBot
+from chiru.cache import ObjectCache
 from chiru.event.chunker import GuildChunker
 from chiru.event.model import DispatchedEvent, Ready, ShardReady
 from chiru.event.parser import CachedEventParser
@@ -34,6 +35,9 @@ class EventContext:
     """
 
     _collection: GatewayCollection = attr.ib(alias="collection")
+
+    #: A reference to the shared client that this event was dispatched from.
+    client: ChiruBot = attr.ib()
 
     #: The shard that this event was received on.
     shard_id: int = attr.ib()
@@ -179,6 +183,7 @@ class StatefulEventDispatcher:
                     continue
 
                 context = EventContext(
+                    client=self.client,
                     collection=stream,
                     shard_id=event.shard_id,
                     dispatch_name=event.event_name,
