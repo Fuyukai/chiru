@@ -6,8 +6,8 @@ from typing import Any, NoReturn, TypeVar, final, overload
 
 import anyio
 import attr
-import bitarray
 import structlog
+from bitarray.util import zeros
 
 from chiru.bot import ChiruBot
 from chiru.event.chunker import GuildChunker
@@ -81,7 +81,7 @@ class StatefulEventDispatcher:
 
         # global ready state checking.
         # bit array of the shards that have fired a ShardReady or not.
-        self._ready_shards = bitarray.bitarray("0" * bot.cached_gateway_info.shards)
+        self._ready_shards = zeros(bot.cached_gateway_info.shards)
 
     @staticmethod
     async def _run_safely(fn: Callable[[], Awaitable[None]]) -> None:
