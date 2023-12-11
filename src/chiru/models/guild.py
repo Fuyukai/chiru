@@ -12,6 +12,7 @@ from chiru.models.base import DiscordObject, HasIcon, StatefulMixin
 from chiru.models.channel import AnyGuildChannel, RawChannel
 from chiru.models.emoji import RawCustomEmoji
 from chiru.models.member import Member, RawMember
+from chiru.models.role import Role
 from chiru.models.user import User
 
 if TYPE_CHECKING:
@@ -20,8 +21,8 @@ if TYPE_CHECKING:
 DObjT = TypeVar("DObjT")
 
 
-@final
 @attr.s(slots=True)
+@final
 class GuildChannelList(Mapping[int, AnyGuildChannel]):
     """
     A more stateful container for the channels in a guild.
@@ -58,8 +59,8 @@ class GuildChannelList(Mapping[int, AnyGuildChannel]):
         return len(self._channels)
 
 
-@final
 @attr.s(slots=True, kw_only=True)
+@final
 class GuildMemberList(Mapping[int, Member]):
     """
     A more stateful container for the members in a guild.
@@ -115,8 +116,8 @@ class GuildMemberList(Mapping[int, Member]):
         return len(self._members)
 
 
-@final
 @attr.s(slots=True)
+@final
 class GuildEmojis(Mapping[int, RawCustomEmoji]):
     """
     A stateful container for the emojis in a guild.
@@ -168,6 +169,41 @@ class GuildEmojis(Mapping[int, RawCustomEmoji]):
 
 
 @attr.s(slots=True, kw_only=True)
+class GuildRolesList(Mapping[int, Role]):
+    """
+    A stateful container for the roles in a guild.
+    """
+
+    _roles: dict[int, Role] = attr.ib(factory=dict, alias="roles")
+
+    @classmethod
+    def from_guild_packet(
+        cls,
+        body: Mapping[str, Any],
+        factory: ModelObjectFactory,
+    ) -> GuildRolesList:
+        """
+        Creates a new :class:`.GuildRolesList` from the provided ``GUILD_CREATE`` packet.
+        """
+
+        roles: dict[int, Role] = {}
+        for role_data in body["roles"]:
+            role = factory.make_role(role_data)
+            roles[role.id] = role
+
+        return GuildRolesList(roles=roles)
+
+    def __getitem__(self, key: int) -> Role:
+        return self._roles[key]
+
+    def __iter__(self) -> Iterator[int]:
+        return iter(self._roles)
+
+    def __len__(self) -> int:
+        return len(self._roles)
+
+
+@attr.s(slots=True, kw_only=True)
 class UnavailableGuild(DiscordObject):
     """
     A single raw unavailable guild.
@@ -205,6 +241,7 @@ class RawGuild(DiscordObject, HasIcon):
         raw_channel_fn = override(struct_hook=partial(cls.unmap_to_id, converter))
         raw_member_fn = override(struct_hook=partial(cls.unmap_to_id, converter))
         raw_emoji_fn = override(struct_hook=partial(cls.unmap_to_id, converter))
+        raw_roles_fn = override(struct_hook=partial(cls.unmap_to_id, converter))
 
         converter.register_structure_hook(
             RawGuild,
@@ -214,6 +251,7 @@ class RawGuild(DiscordObject, HasIcon):
                 channels=raw_channel_fn,
                 members=raw_member_fn,
                 emojis=raw_emoji_fn,
+                roles=raw_roles_fn,
                 _cattrs_forbid_extra_keys=False,
                 icon_hash=override(rename="icon"),
             ),
@@ -278,3 +316,6 @@ class Guild(RawGuild, StatefulMixin):
     #: contain ownership information; see :meth:`.ChiruHttpClient.get_emojis` for retrieving
     #: emoji with ownership information.
     emojis: GuildEmojis = attr.ib(init=False)
+
+    #: The list of stateful roles that this guild contains.
+    roles: GuildRolesList = attr.ib(init=False)

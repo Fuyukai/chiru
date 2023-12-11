@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncGenerator, Callable
 from contextlib import asynccontextmanager
-from typing import Any, TypeVar
+from typing import Any, SupportsInt, TypeVar
 
 import anyio
 from anyio import CancelScope, CapacityLimiter
@@ -62,3 +62,10 @@ async def cancel_on_close(group: TaskGroup) -> AsyncGenerator[TaskGroup, None]:
             yield group
         finally:
             group.cancel_scope.cancel()
+
+
+def maybe_int(what: SupportsInt | None) -> int | None:
+    if what is None:
+        return None
+
+    return int(what)

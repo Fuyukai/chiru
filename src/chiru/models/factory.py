@@ -19,10 +19,12 @@ from chiru.models.guild import (
     GuildChannelList,
     GuildEmojis,
     GuildMemberList,
+    GuildRolesList,
     UnavailableGuild,
 )
 from chiru.models.member import Member
 from chiru.models.message import Message
+from chiru.models.role import Role
 from chiru.models.user import User
 from chiru.serialise import CONVERTER
 
@@ -159,6 +161,18 @@ class ModelObjectFactory:
         obb._chiru_set_client(bot=self._client)
         return obb
 
+    def make_role(
+        self,
+        role_data: Mapping[str, Any],
+    ) -> Role:
+        """
+        Creates a new stateful :class:`.Role`.
+        """
+
+        role = CONVERTER.structure(role_data, Role)
+        role._chiru_set_client(bot=self._client)
+        return role
+
     def make_guild(
         self,
         guild_data: Mapping[str, Any],
@@ -176,5 +190,6 @@ class ModelObjectFactory:
         base_guild.channels = GuildChannelList.from_guild_packet(base_guild.id, guild_data, self)
         base_guild.members = GuildMemberList.from_guild_packet(base_guild.id, guild_data, self)
         base_guild.emojis = GuildEmojis.from_guild_packet(base_guild.id, guild_data, self)
+        base_guild.roles = GuildRolesList.from_guild_packet(guild_data, self)
 
         return base_guild

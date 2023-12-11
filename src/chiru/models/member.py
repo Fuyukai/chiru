@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
 import attr
@@ -8,6 +9,7 @@ from arrow import Arrow
 from cattr import Converter, override
 
 from chiru.models.base import DiscordObject, StatefulMixin
+from chiru.models.role import Role
 from chiru.models.user import RawUser, User
 
 if TYPE_CHECKING:
@@ -77,6 +79,16 @@ class Member(DiscordObject, RawMember, StatefulMixin):
         guild = self._client.object_cache.get_available_guild(self.guild_id)
         assert guild, f"Somehow got a member for a non-existent guild {self.guild_id}"
         return guild
+
+    @property
+    def roles(self) -> Sequence[Role]:
+        """
+        Gets the list of :class:`.Role` instances this member has.
+        """
+
+        return sorted(
+            [self.guild.roles[it] for it in self.role_ids], key=lambda role: role.position
+        )
 
     async def kick(self, *, reason: str | None = None) -> None:
         """

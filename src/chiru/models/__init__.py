@@ -42,4 +42,9 @@ from chiru.models.presence import (
     PresenceStatus as PresenceStatus,
     SendablePresenceStatus as SendablePresenceStatus,
 )
+from chiru.models.role import (
+    RawRole as RawRole,
+    Role as Role,
+    RoleAdditionalMetadata as RoleAdditionalMetadata,
+)
 from chiru.models.user import RawUser as RawUser, User as User
