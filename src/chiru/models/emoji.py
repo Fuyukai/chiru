@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import NewType
+from collections.abc import Mapping
+from typing import Any, NewType
 
 import attr
 import cattr
@@ -88,5 +89,23 @@ class RawCustomEmojiWithOwner(RawCustomEmoji):
     creator: RawUser = attr.ib()
 
 
-#: TThe union type of possible emojis.
+#: The union type of possible emojis.
 Emoji = UnicodeEmoji | RawCustomEmoji | RawCustomEmojiWithOwner
+
+
+def structure_emoji_field(converter: Converter, data: Mapping[str, Any], _: Any) -> Emoji:
+    """
+    Structures an emoji field automatically.
+    """
+
+    id = data.get("id", None)
+    if id is None:
+        # definitely a unicode emoji
+        return UnicodeEmoji(data["name"])
+
+    if "user" in data:
+        # has ownership info
+        return converter.structure(data, RawCustomEmojiWithOwner)
+
+    # just a plain RawCustomEmoji
+    return converter.structure(data, RawCustomEmoji)

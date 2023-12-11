@@ -1,11 +1,14 @@
+from __future__ import annotations
+
 import enum
+from functools import partial
 from typing import Literal
 
 import attr
 import cattr
-from cattr import Converter
+from cattr import Converter, override
 
-from chiru.models.emoji import Emoji
+from chiru.models.emoji import Emoji, structure_emoji_field
 
 # a minimum possible effort object as the primary purpose is literally just tracking statuses
 # and status names. i might come back to this in the future but not for now.
@@ -41,7 +44,7 @@ class Activity:
     emoji: Emoji | None = attr.ib(default=None)
 
     @classmethod
-    def custom(cls, text: str, *, url: str | None = None):
+    def custom(cls, text: str, *, url: str | None = None) -> Activity:
         """
         Shortcut method for creating a new custom activity.
         """
@@ -62,15 +65,25 @@ class Presence:
 
     @classmethod
     def configure_converter(cls, converter: Converter) -> None:
-        for klass in (cls, Activity):
-            converter.register_structure_hook(
-                klass,
-                cattr.gen.make_dict_structure_fn(
-                    klass,
-                    converter,
-                    _cattrs_forbid_extra_keys=False,
-                ),
-            )
+        converter.register_structure_hook(
+            cls,
+            cattr.gen.make_dict_structure_fn(
+                cls,
+                converter,
+                _cattrs_forbid_extra_keys=False,
+            ),
+        )
+
+        emoji_field = partial(structure_emoji_field, converter)
+        converter.register_structure_hook(
+            Activity,
+            cattr.gen.make_dict_structure_fn(
+                Activity,
+                converter,
+                emoji=override(struct_hook=emoji_field),
+                _cattrs_forbid_extra_keys=False,
+            ),
+        )
 
     #: The current computed status for this member.
     status: PresenceStatus = attr.ib()
