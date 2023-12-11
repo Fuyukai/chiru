@@ -1,4 +1,7 @@
+from typing import Any
+
 import arrow
+from bitarray.util import int2ba
 from cattrs import Converter
 from cattrs.preconf.json import configure_converter
 
@@ -9,6 +12,7 @@ from chiru.models.guild import RawGuild
 from chiru.models.member import RawMember
 from chiru.models.message import RawMessage
 from chiru.models.oauth import OAuthApplication
+from chiru.models.permissions import ReadOnlyPermissions, WriteablePermissions
 from chiru.models.presence import Presence
 from chiru.models.role import Role
 from chiru.models.user import RawUser
@@ -16,6 +20,22 @@ from chiru.models.user import RawUser
 
 def unstructure_arrow(it: arrow.Arrow) -> str:
     return str(it.isoformat())
+
+
+def unstructure_perms(it: ReadOnlyPermissions) -> str:
+    return str(it)
+
+
+def structure_perms(it: str, type: Any) -> ReadOnlyPermissions | WriteablePermissions:
+    perms = int(it)
+    ba = int2ba(perms)
+
+    if type == ReadOnlyPermissions:
+        return ReadOnlyPermissions(bitfield=ba)
+    if type == WriteablePermissions:
+        return WriteablePermissions(bitfield=ba)
+
+    raise ValueError(f"unknown type {type}")
 
 
 def create_chiru_converter() -> Converter:
@@ -31,6 +51,10 @@ def create_chiru_converter() -> Converter:
     configure_converter(converter)
     converter.register_structure_hook(arrow.Arrow, lambda it, typ: arrow.get(it))
     converter.register_unstructure_hook(arrow.Arrow, unstructure_arrow)
+    
+    for klass in (ReadOnlyPermissions, WriteablePermissions):
+        converter.register_structure_hook(klass, structure_perms)
+        converter.register_unstructure_hook(klass, unstructure_perms)
 
     Embed.configure_converter(converter)
     RawUser.configure_converter(converter)

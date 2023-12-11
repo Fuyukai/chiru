@@ -9,6 +9,7 @@ from cattr import Converter, override
 
 from chiru.models.base import DiscordObject, HasIcon, StatefulMixin
 from chiru.models.emoji import UnicodeEmoji
+from chiru.models.permissions import ReadOnlyPermissions
 from chiru.util import maybe_int
 
 # TODO: permissions...
@@ -110,6 +111,9 @@ class RawRole(DiscordObject, HasIcon):
 
     #: The position for this role in the list of roles.
     position: int = attr.ib()
+
+    #: The :class:`.ReadOnlyPermissions` for this role.
+    permissions: ReadOnlyPermissions = attr.ib()
 
     # no clue wtf either of these are
     #: The icon hash for this role.
