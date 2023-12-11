@@ -12,7 +12,7 @@ from chiru.models.base import DiscordObject, HasIcon, StatefulMixin
 from chiru.models.channel import AnyGuildChannel, RawChannel
 from chiru.models.emoji import RawCustomEmoji
 from chiru.models.member import Member, RawMember
-from chiru.models.role import Role
+from chiru.models.role import RawRole, Role
 from chiru.models.user import User
 
 if TYPE_CHECKING:
@@ -282,11 +282,22 @@ class RawGuild(DiscordObject, HasIcon):
     #: The mapping of :class:`.RawCustomEmoji` instances that this guild contains.
     emojis: Mapping[int, RawCustomEmoji] = attr.ib(factory=dict)
 
+    #: The mapping of :class:`.RawRole` instances that this guild contains.
+    roles: Mapping[int, RawRole] = attr.ib()
+
     #: If this guild is a large guild, i.e. needs member chunking. Always False on the HTTP API.
     large: bool = attr.ib(default=False)
 
     #: The number of members in this guild. Always zero on the HTTP API.
     member_count: int = attr.ib(default=0)
+
+    @property
+    def default_role(self) -> RawRole:
+        """
+        Gets the default (the ``@everyone`` role) for this guild.
+        """
+
+        return self.roles[self.id]
 
     @property
     def icon_url(self) -> str | None:
@@ -319,3 +330,12 @@ class Guild(RawGuild, StatefulMixin):
 
     #: The list of stateful roles that this guild contains.
     roles: GuildRolesList = attr.ib(init=False)
+
+    @property
+    def default_role(self) -> Role:
+        """
+        Gets the default :class:`.Role` for this guild (the @everyone role).
+        """
+
+        # i'm sure that docstring will annoy somebody.
+        return self.roles[self.id]
