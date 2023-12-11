@@ -10,7 +10,6 @@ import structlog
 from bitarray.util import zeros
 
 from chiru.bot import ChiruBot
-from chiru.cache import ObjectCache
 from chiru.event.chunker import GuildChunker
 from chiru.event.model import DispatchedEvent, Ready, ShardReady
 from chiru.event.parser import CachedEventParser

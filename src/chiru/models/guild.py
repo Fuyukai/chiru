@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from collections.abc import Iterator, Mapping
 from functools import partial
-from typing import TYPE_CHECKING, Any, TypeVar, final
+from typing import TYPE_CHECKING, Any, TypeVar, cast, final
 
 import attr
 import cattr
 from cattr import Converter, override
 
 from chiru.models.base import DiscordObject, HasIcon, StatefulMixin
-from chiru.models.channel import AnyGuildChannel, RawChannel
+from chiru.models.channel import AnyGuildChannel, RawChannel, TextualGuildChannel
 from chiru.models.emoji import RawCustomEmoji
 from chiru.models.member import Member, RawMember
 from chiru.models.role import RawRole, Role
@@ -291,6 +291,10 @@ class RawGuild(DiscordObject, HasIcon):
     #: The number of members in this guild. Always zero on the HTTP API.
     member_count: int = attr.ib(default=0)
 
+    #: The ID of the "system channel" (or the default channel), where the native welcome messages
+    #: are posted. May be None if this guild has no such channel.
+    system_channel_id: int | None = attr.ib(default=None)
+
     @property
     def default_role(self) -> RawRole:
         """
@@ -298,6 +302,17 @@ class RawGuild(DiscordObject, HasIcon):
         """
 
         return self.roles[self.id]
+
+    @property
+    def system_channel(self) -> RawChannel | None:
+        """
+        Gets the system channel for this guild.
+        """
+
+        if self.system_channel_id is None:
+            return None
+
+        return self.channels[self.system_channel_id]
 
     @property
     def icon_url(self) -> str | None:
@@ -339,3 +354,15 @@ class Guild(RawGuild, StatefulMixin):
 
         # i'm sure that docstring will annoy somebody.
         return self.roles[self.id]
+
+    @property
+    def system_channel(self) -> TextualGuildChannel | None:
+        """
+        Gets the system channel for this guild.
+        """
+
+        if self.system_channel_id is None:
+            return None
+
+        # always a textual channel afaict.
+        return cast(TextualGuildChannel, self.channels[self.system_channel_id])

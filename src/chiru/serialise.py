@@ -51,7 +51,7 @@ def create_chiru_converter() -> Converter:
     configure_converter(converter)
     converter.register_structure_hook(arrow.Arrow, lambda it, typ: arrow.get(it))
     converter.register_unstructure_hook(arrow.Arrow, unstructure_arrow)
-    
+
     for klass in (ReadOnlyPermissions, WriteablePermissions):
         converter.register_structure_hook(klass, structure_perms)
         converter.register_unstructure_hook(klass, unstructure_perms)
