@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Self
+
 import attr
 from bitarray import bitarray
 from bitarray.util import ba2int, zeros
@@ -16,8 +18,22 @@ class ReadOnlyPermissions:
     HTTP requests and stateful objects, see :class:`.WriteablePermissions`.
 
     Each permission is a single bit in the backing bitfield, which may be any number of bits long.
-    This class can be serialised into
+    This class can be turned into an int with the ``int()`` method, which can then be used over the
+    HTTP API.
     """
+
+    @classmethod
+    def all(cls) -> Self:
+        """
+        Returns a new instance of this type with all permissions set to True.
+        """
+
+        bf = bitarray(128)
+        for i in range(0, 128):
+            bf[i] = 1
+
+        return cls(bitfield=bf)
+
 
     # 128 bits should be enough for now.
     _bitfield: bitarray = attr.ib(factory=lambda: zeros(128), alias="bitfield")
