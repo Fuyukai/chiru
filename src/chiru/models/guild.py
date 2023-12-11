@@ -8,7 +8,7 @@ import attr
 import cattr
 from cattr import Converter, override
 
-from chiru.models.base import DiscordObject, StatefulMixin
+from chiru.models.base import DiscordObject, HasIcon, StatefulMixin
 from chiru.models.channel import AnyGuildChannel, RawChannel
 from chiru.models.emoji import RawCustomEmoji
 from chiru.models.member import Member, RawMember
@@ -27,7 +27,7 @@ class GuildChannelList(Mapping[int, AnyGuildChannel]):
     A more stateful container for the channels in a guild.
     """
 
-    _channels: dict[int, AnyGuildChannel] = attr.ib(factory=dict)
+    _channels: dict[int, AnyGuildChannel] = attr.ib(factory=dict, repr=False)
 
     @classmethod
     def from_guild_packet(
@@ -65,8 +65,8 @@ class GuildMemberList(Mapping[int, Member]):
     A more stateful container for the members in a guild.
     """
 
-    _members: dict[int, Member] = attr.ib(factory=dict, alias="members")
-    _guild_id: int = attr.ib(alias="guild_id")
+    _members: dict[int, Member] = attr.ib(factory=dict, alias="members", repr=False)
+    _guild_id: int = attr.ib(alias="guild_id", repr=False)
 
     @classmethod
     def from_guild_packet(
@@ -122,7 +122,7 @@ class GuildEmojis(Mapping[int, RawCustomEmoji]):
     A stateful container for the emojis in a guild.
     """
 
-    _emojis: dict[int, RawCustomEmoji] = attr.ib(factory=dict)
+    _emojis: dict[int, RawCustomEmoji] = attr.ib(factory=dict, repr=False)
 
     @classmethod
     def from_update_packet(
@@ -178,7 +178,7 @@ class UnavailableGuild(DiscordObject):
 
 
 @attr.s(kw_only=True)
-class RawGuild(DiscordObject):
+class RawGuild(DiscordObject, HasIcon):
     """
     A single raw guild object (or server, in more common nomenclature).
     """
@@ -215,23 +215,22 @@ class RawGuild(DiscordObject):
                 members=raw_member_fn,
                 emojis=raw_emoji_fn,
                 _cattrs_forbid_extra_keys=False,
+                icon_hash=override(rename="icon"),
             ),
         )
 
         converter.register_structure_hook(
             cl=Guild,
             func=cattr.gen.make_dict_structure_fn(
-                Guild,
-                converter,
-                _cattrs_forbid_extra_keys=False,
+                Guild, converter, _cattrs_forbid_extra_keys=False, icon_hash=override(rename="icon")
             ),
         )
 
     #: The name of this guild.
     name: str = attr.ib()
 
-    #: The icon hash for this guild.
-    icon: str = attr.ib()
+    #: The icon hash for this guild, if one is set.
+    icon_hash: str | None = attr.ib()
 
     #: If this guild is unavailable or not. Always False.
     unavailable: bool = attr.ib(default=False)
@@ -250,6 +249,13 @@ class RawGuild(DiscordObject):
 
     #: The number of members in this guild. Always zero on the HTTP API.
     member_count: int = attr.ib(default=0)
+
+    @property
+    def icon_url(self) -> str | None:
+        if not self.icon_hash:
+            return None
+
+        return f"https://cdn.discordapp.com/icons/{self.id}/{self.icon_hash}.webp"
 
 
 @attr.s(slots=True, kw_only=True)

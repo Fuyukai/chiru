@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol
 
 import arrow
 import attr
@@ -61,3 +61,18 @@ class StatefulMixin:
 
     def _chiru_set_client(self, bot: ChiruBot) -> None:
         self._client = bot
+
+
+class HasIcon(Protocol):
+    """
+    Protocol for any object that is capable of having an icon (usually stored in the form of an
+    icon hash).
+    """
+
+    @property
+    def icon_url(self) -> str | None:
+        """
+        The fully qualified icon URL for this object. This may be None if the icon is unset.
+        """
+
+        ...
