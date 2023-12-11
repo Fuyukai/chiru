@@ -9,6 +9,7 @@ from arrow import Arrow
 from cattr import Converter, override
 
 from chiru.models.base import DiscordObject, StatefulMixin
+from chiru.models.permissions import ReadOnlyPermissions
 from chiru.models.role import Role
 from chiru.models.user import RawUser, User
 
@@ -83,12 +84,55 @@ class Member(DiscordObject, RawMember, StatefulMixin):
     @property
     def roles(self) -> Sequence[Role]:
         """
-        Gets the list of :class:`.Role` instances this member has.
+        Gets the list of :class:`.Role` instances this member has. This is sorted from the lowest
+        role's position to the highest role's position. 
         """
 
         return sorted(
             [self.guild.roles[it] for it in self.role_ids], key=lambda role: role.position
         )
+
+    @property
+    def default_permissions(self) -> ReadOnlyPermissions:
+        """
+        Calculates the default permissions for this member in this guild, ignoring the Administrator
+        bit.
+        """
+
+        base_permissions = self.guild.default_role.permissions._bitfield
+
+        for role in self.roles:
+            base_permissions |= role.permissions._bitfield
+        
+        return ReadOnlyPermissions(bitfield=base_permissions)
+    
+    @property
+    def effective_permissions(self) -> ReadOnlyPermissions:
+        """
+        Calculates the *effective* permissions for this member in this guild, taking into account
+        the Administrator bit.
+        """
+
+        if self.id == self.guild.owner_id:
+            return ReadOnlyPermissions.all()
+
+        perms = self.default_permissions
+        if perms.administrator:
+            return ReadOnlyPermissions.all()
+        
+        return perms
+
+    @property
+    def top_role(self) -> Role:
+        """
+        Gets the top-most role for this member. If the member has no custom roles, this will return
+        the guild's default role.
+        """
+
+        if not self.role_ids:
+            return self.guild.default_role
+        
+        return self.roles[-1]
 
     async def kick(self, *, reason: str | None = None) -> None:
         """
