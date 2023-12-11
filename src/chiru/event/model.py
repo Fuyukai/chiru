@@ -33,32 +33,32 @@ class DispatchedEvent:
     __slots__ = ()
 
 
-@final
 @attr.s(str=True, slots=True)
+@final
 class Connected(DispatchedEvent):
     """
     Published when a single shard has successfully connected to the gateway.
     """
 
 
-@final
 @attr.s(str=True, slots=True)
+@final
 class ShardReady(DispatchedEvent):
     """
     Published when a single shard has streamed all guilds.
     """
 
 
-@final
 @attr.s(str=True, slots=True)
+@final
 class Ready(DispatchedEvent):
     """
     Published when all shards are ready.
     """
 
 
-@final
 @attr.s(slots=True, frozen=True)
+@final
 class GuildStreamed(DispatchedEvent):
     """
     Published when a guild has been streamed during gateway startup.
@@ -68,8 +68,8 @@ class GuildStreamed(DispatchedEvent):
     guild: Guild = attr.ib()
 
 
-@final
 @attr.s(slots=True, frozen=True)
+@final
 class GuildJoined(DispatchedEvent):
     """
     Published when a bot joins a guild during non-startup operation.
@@ -79,8 +79,8 @@ class GuildJoined(DispatchedEvent):
     guild: Guild = attr.ib()
 
 
-@final
 @attr.s(slots=True, frozen=True)
+@final
 class GuildAvailable(DispatchedEvent):
     """
     Published when a guild becomes available e.g. after an outage and not during startup.
@@ -90,8 +90,8 @@ class GuildAvailable(DispatchedEvent):
     guild: Guild = attr.ib()
 
 
-@final
 @attr.s(slots=True, frozen=True, kw_only=True)
+@final
 class InvalidGuildChunk(DispatchedEvent):
     """
     Published when a guild chunk request failed.
@@ -101,8 +101,8 @@ class InvalidGuildChunk(DispatchedEvent):
     guild_id: int = attr.ib()
 
 
-@final
 @attr.s(slots=True, frozen=True, kw_only=True)
+@final
 class GuildMemberChunk(DispatchedEvent):
     """
     Published when a member chunk is returned in response to Guild Request Members.
@@ -124,8 +124,8 @@ class GuildMemberChunk(DispatchedEvent):
     nonce: str | None = attr.ib(default=None)
 
 
-@final
 @attr.s(slots=True, frozen=True, kw_only=True)
+@final
 class GuildMemberAdd(DispatchedEvent):
     """
     Published when a new member joins a guild.
@@ -138,8 +138,8 @@ class GuildMemberAdd(DispatchedEvent):
     member: Member = attr.ib()
 
 
-@final
 @attr.s(slots=True, frozen=True, kw_only=True)
+@final
 class GuildMemberRemove(DispatchedEvent):
     """
     Published when a user is removed from a guild.
@@ -159,8 +159,8 @@ class GuildMemberRemove(DispatchedEvent):
     guild: Guild | None = attr.ib()
 
 
-@final
 @attr.s(frozen=True, slots=True, kw_only=True)
+@final
 class GuildMemberUpdate(DispatchedEvent):
     """
     Published when a member updates information about their profile in a guild.
@@ -174,6 +174,7 @@ class GuildMemberUpdate(DispatchedEvent):
 
 
 @attr.s(frozen=True, slots=True, kw_only=True)
+@final
 class GuildEmojiUpdate(DispatchedEvent):
     """
     Published when guilds have their emojis updated.
@@ -189,8 +190,8 @@ class GuildEmojiUpdate(DispatchedEvent):
     new_emojis: list[RawCustomEmoji] = attr.ib()
 
 
-@final
 @attr.s(frozen=True, slots=True, kw_only=True)
+@final
 class MessageCreate(DispatchedEvent):
     """
     Published when a message is created within a channel.
@@ -211,8 +212,8 @@ class MessageCreate(DispatchedEvent):
         return self.message.channel
 
 
-@final
 @attr.s(frozen=True, slots=True, kw_only=True)
+@final
 class MessageUpdate(DispatchedEvent):
     """
     Published when a message is updated within a channel (i.e. edited).
