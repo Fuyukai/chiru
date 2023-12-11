@@ -295,6 +295,9 @@ class RawGuild(DiscordObject, HasIcon):
     #: are posted. May be None if this guild has no such channel.
     system_channel_id: int | None = attr.ib(default=None)
 
+    #: The ID for the owner of this guild.
+    owner_id: int = attr.ib()
+
     @property
     def default_role(self) -> RawRole:
         """
@@ -302,17 +305,6 @@ class RawGuild(DiscordObject, HasIcon):
         """
 
         return self.roles[self.id]
-
-    @property
-    def system_channel(self) -> RawChannel | None:
-        """
-        Gets the system channel for this guild.
-        """
-
-        if self.system_channel_id is None:
-            return None
-
-        return self.channels[self.system_channel_id]
 
     @property
     def icon_url(self) -> str | None:
@@ -345,6 +337,14 @@ class Guild(RawGuild, StatefulMixin):
 
     #: The list of stateful roles that this guild contains.
     roles: GuildRolesList = attr.ib(init=False)
+
+    @property
+    def owner(self) -> Member:
+        """
+        Gets the owner of this guild.
+        """
+
+        return self.members[self.owner_id]
 
     @property
     def default_role(self) -> Role:
