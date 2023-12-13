@@ -1,3 +1,4 @@
+import abc
 from collections.abc import Collection, Iterable
 from typing import final
 
@@ -57,9 +58,18 @@ class Ready(DispatchedEvent):
     """
 
 
+class AnyGuildJoined(DispatchedEvent, abc.ABC):
+    """
+    Base type for any event that concerns joining a guild.
+    """
+
+    @property
+    def guild(self) -> Guild: ...
+
+
 @attr.s(slots=True, frozen=True)
 @final
-class GuildStreamed(DispatchedEvent):
+class GuildStreamed(AnyGuildJoined):
     """
     Published when a guild has been streamed during gateway startup.
     """
@@ -70,7 +80,7 @@ class GuildStreamed(DispatchedEvent):
 
 @attr.s(slots=True, frozen=True)
 @final
-class GuildJoined(DispatchedEvent):
+class GuildJoined(AnyGuildJoined):
     """
     Published when a bot joins a guild during non-startup operation.
     """
@@ -81,7 +91,7 @@ class GuildJoined(DispatchedEvent):
 
 @attr.s(slots=True, frozen=True)
 @final
-class GuildAvailable(DispatchedEvent):
+class GuildAvailable(AnyGuildJoined):
     """
     Published when a guild becomes available e.g. after an outage and not during startup.
     """
@@ -272,21 +282,7 @@ class MessageBulkDelete(DispatchedEvent):
     def as_single_events(self) -> Iterable[DispatchedEvent]:
         """
         Returns a generator that yields every message in this event as a single
-        :class:`.MessageDelete` event. This allows unifiying the code paths for both individual and
-        bulk deletions, like so:
-
-        .. code-block:: python
-
-            async def handle_single_deletion(ctx: EventContext, evt: MessageDelete) -> None:
-                ...
-
-            async def handle_bulk_deletion(ctx: EventContext, e: MessageBulkDelete) -> None:
-                for evt in e.as_single_events():
-                    await handle_single_deletion(ctx, evt)
-
-            dispatcher.add_event_handler(MessageDelete, handle_single_deletion)
-            dispatcher.add_event_handler(MessageBulkDelete, handle_bulk_deletion)
-
+        :class:`.MessageDelete` event.
         """
 
         for id in self.messages:

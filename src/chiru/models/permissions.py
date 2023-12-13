@@ -34,7 +34,6 @@ class ReadOnlyPermissions:
 
         return cls(bitfield=bf)
 
-
     # 128 bits should be enough for now.
     _bitfield: bitarray = attr.ib(factory=lambda: zeros(128), alias="bitfield")
 

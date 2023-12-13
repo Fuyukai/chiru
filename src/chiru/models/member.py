@@ -85,7 +85,7 @@ class Member(DiscordObject, RawMember, StatefulMixin):
     def roles(self) -> Sequence[Role]:
         """
         Gets the list of :class:`.Role` instances this member has. This is sorted from the lowest
-        role's position to the highest role's position. 
+        role's position to the highest role's position.
         """
 
         return sorted(
@@ -103,9 +103,9 @@ class Member(DiscordObject, RawMember, StatefulMixin):
 
         for role in self.roles:
             base_permissions |= role.permissions._bitfield
-        
+
         return ReadOnlyPermissions(bitfield=base_permissions)
-    
+
     @property
     def effective_permissions(self) -> ReadOnlyPermissions:
         """
@@ -119,7 +119,7 @@ class Member(DiscordObject, RawMember, StatefulMixin):
         perms = self.default_permissions
         if perms.administrator:
             return ReadOnlyPermissions.all()
-        
+
         return perms
 
     @property
@@ -131,7 +131,7 @@ class Member(DiscordObject, RawMember, StatefulMixin):
 
         if not self.role_ids:
             return self.guild.default_role
-        
+
         return self.roles[-1]
 
     async def kick(self, *, reason: str | None = None) -> None:

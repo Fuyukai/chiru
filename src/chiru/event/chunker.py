@@ -11,11 +11,16 @@ import structlog
 from anyio import Event, create_task_group
 from structlog.stdlib import BoundLogger
 
-from chiru.event.model import GuildMemberChunk
+from chiru.event.dispatcher import ChannelDispatcher, DispatchChannel, start_consumer_task
+from chiru.event.model import (
+    AnyGuildJoined,
+    GuildAvailable,
+    GuildJoined,
+    GuildMemberChunk,
+    GuildStreamed,
+)
 from chiru.gateway.collection import GatewayCollection
 from chiru.gateway.event import GatewayMemberChunkRequest
-from chiru.models.guild import Guild
-from chiru.util import cancel_on_close
 
 # TODO: Manual per-user chunking.
 
@@ -66,68 +71,88 @@ class GuildChunker:
         *,
         collection: GatewayCollection,
     ) -> NoReturn:
+        """
+        Runs forever in a loop, receiving outgoing chunking messages from the chunker.
+        """
+
         async with self._pending_chunk_recv:
-            while True:
-                shard_id, msg = await self._pending_chunk_recv.receive()
+            async for shard_id, msg in self._pending_chunk_recv:
                 await collection.send_to_shard(shard_id, msg)
 
-    def handle_member_chunk(self, shard_id: int, evt: GuildMemberChunk) -> None:
-        """
-        Handles a single incoming member chunk.
-        """
+    async def handle_member_chunk(self, channel: DispatchChannel[GuildMemberChunk]) -> None:
+        async for _, evt in channel:
+            # the parser is responsible for actually loading all of the members...
+            # this mostly just tracks guilds that are fully chunked
 
-        # the parser is responsible for actually loading all of the members...
-        # this mostly just tracks guilds that are fully chunked
+            logger.debug(
+                "Received member chunk",
+                chunk_index=evt.chunk_index,
+                chunk_count=evt.chunk_count,
+                guild_id=evt.guild.id,
+            )
 
-        logger.debug(
-            "Received member chunk",
-            chunk_index=evt.chunk_index,
-            chunk_count=evt.chunk_count,
-            guild_id=evt.guild.id,
-        )
+            if evt.chunk_index + 1 >= evt.chunk_count:
+                logger.debug("Fully chunked", guild_id=evt.guild.id)
+                self._guild_fully_chunked[evt.guild.id].set()
 
-        if evt.chunk_index + 1 >= evt.chunk_count:
-            logger.debug("Fully chunked", guild_id=evt.guild.id)
-            self._guild_fully_chunked[evt.guild.id].set()
-
-    def handle_joined_guild(
+    async def handle_joined_guild(
         self,
-        shard_id: int,
-        guild: Guild,
+        channel: DispatchChannel[AnyGuildJoined],
     ) -> None:
         """
         Handles a single incoming guild.
         """
 
-        if guild.id in self._guild_fully_chunked:
-            return
+        async for ctx, evt in channel:
+            guild = evt.guild
+            if guild.id in self._guild_fully_chunked:
+                return
 
-        self._guild_fully_chunked[guild.id] = Event()
+            self._guild_fully_chunked[guild.id] = Event()
 
-        logger.debug("Joined guild", guild=guild.id, large=guild.large)
+            logger.debug("Joined guild", guild=guild.id, large=guild.large)
 
-        # non-large guilds never need chunking, so set their event immediately
-        if not guild.large:
-            self._guild_fully_chunked[guild.id].set()
-            return
+            # non-large guilds never need chunking, so set their event immediately
+            if not guild.large:
+                self._guild_fully_chunked[guild.id].set()
+                continue
 
-        evt = GatewayMemberChunkRequest(guild_id=guild.id, query="", limit=0, presences=False)
-        self._pending_chunk_write.send_nowait((shard_id, evt))
+            evt = GatewayMemberChunkRequest(guild_id=guild.id, query="", limit=0, presences=False)
+            self._pending_chunk_write.send_nowait((ctx.shard_id, evt))
 
 
 @asynccontextmanager
 async def create_chunker(
     collection: GatewayCollection,
+    dispatcher: ChannelDispatcher,
 ) -> AsyncGenerator[GuildChunker, None]:
     """
     Creates a new :class:`.GuildChunker` that will send outgoing member chunks automatically.
 
-    :param collection: The :class:`.GatewayCollection`
+    .. code-block:: python
+
+        async def main():
+            dispatcher = ChannelDispatcher()
+
+            async with (
+                open_bot(TOKEN) as bot,
+                bot.start_receiving_events() as collection,
+                create_chunker(collection, dispatcher)
+            ):
+                await dispatcher.run(bot, collection)
+
+    :param collection: The :class:`.GatewayCollection` to send outgoing member chunk events to.
+    :param dispatcher: The :class:`.ChannelDispatcher` to register events into.
     """
 
-    async with cancel_on_close(create_task_group()) as group:
+    async with create_task_group() as group:
         chunker = GuildChunker()
         p = partial(chunker.send_to_outgoing, collection=collection)
         group.start_soon(p)
+
+        start_consumer_task(group, dispatcher, GuildMemberChunk, chunker.handle_member_chunk)
+
+        for type in (GuildJoined, GuildStreamed, GuildAvailable):
+            start_consumer_task(group, dispatcher, type, chunker.handle_joined_guild)
 
         yield chunker

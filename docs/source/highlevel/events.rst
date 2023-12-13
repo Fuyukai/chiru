@@ -41,52 +41,58 @@ events.
 .. autoclass:: chiru.event.parser.CachedEventParser
    :special-members: __init__
 
-Stateful Event Dispatcher
--------------------------
+Channel Event Dispatcher
+------------------------
 
-A more traditional form of event handling is in the form of the event dispatcher. The 
-:class:`.StatefulEventDispatcher` will handle receiving incoming events automatically and 
-dispatching them to a number of background tasks.
+The channel event dispatcher is a higher-level mechanism for handling events based around routing
+events to handlers via channels using the :class:`.ChannelDispatcher`.
 
-.. warning:: 
-
-    Event dispatching in this form breaks structured concurrency and backpressure by reading tasks
-    from the channel and fobbing them off to spawned tasks, meaning that the channel producer will
-    continue to buffer events infinitely.
-
-    To avoid this, the stateful event dispatcher caps the number of concurrent event handling
-    children tasks with a capacity limiter. Going over this limit will cause the gateway producers
-    to stop producing events, avoiding infinite in-memory buffering.
-
-The ``StatefulEventDispatcher`` supports both gateway events and dispatched events in the same
-object. To create one, you can use the :func:`.create_stateful_dispatcher` asynchronous context 
-manager.
-
-.. autofunction:: chiru.event.dispatcher.create_stateful_dispatcher
-
-With the dispatcher open, you can then register events with 
-:meth:`.StatefulEventDispatcher.add_event_handler`. This is used for both gateway events and for
-dispatched events. For more information on gateway events, see :ref:`gateway-events`. Finally,
-use :meth:`.StatefulEventDispatcher.run_forever` to open the gateway connection and start 
-listening to inbound events.
+A single event handler is a function that takes a :class:`.ObjectReadStream` passed in, and
+infinitely loops over the content to stream all incoming events of that type:
 
 .. code-block:: python
 
-    async def print_message_content(ctx: EventContext, evt: MessageCreate):
-        print(evt.message.content)
+    # DispatchChannel is a type alias for ObjectReadStream[tuple[EventContext, T]].
+    # It can be used in place of typing out the actual stream type.
+    async def print_message_content(self, channel: DispatchChannel[MessageCreate]) -> NoReturn:
+        async for (context, event) in channel:
+            print(event.message.content)
 
-    async def print_dispatch(evt: GatewayDispatch):
-        print("dispatched:", evt.event_name)
+Each channel produces a tuple of a :class:`.EventContext`, which provides additional data about the
+dispatched event such as the shard ID and a reference to the client, and an instance of the actual
+event requested.
+
+Then, it can be registered with the :class:`.ChannelDispatcher` like so:
+
+.. code-block:: python
+
+    async def main():
+        dispatcher = ChannelDispatcher()
+        dispatcher.register_event_handling_function(MessageCreate, print_message_content)
+
+Multiple functions can be registered for the same event, and multiple events for the same function.
+
+Finally, the client can be connected and the dispatcher can be started in order to route events:
+
+.. code-block:: python
 
     async with (
-        open_bot(TOKEN) as bot,
-        create_stateful_dispatcher(bot) as dispatcher
+        open_bot(token) as bot,
+        bot.start_receiving_events() as collection,
     ):
-        dispatcher.add_event_handler(GatewayDispatch, print_dispatch)
-        dispatcher.add_event_handler(MessageCreate, print_message_content)
+        await dispatcher.run_forever(bot, collection)
 
-        await dispatcher.run_forever()
+.. warning::
+
+    The channel dispatcher heavily applies the concept of *backpressure*. If an event handler is not
+    available to receive an event from the channel then *no events* will be processed until that
+    event handler is ready. This avoids your bot having a catastrophic resource overload trying to
+    process too many events.
+
+    To avoid this, you can either set a buffer size on the created channels so that the dispatcher
+    can continue processing events in the background, or you should do complex work that might
+    suspend the bot in its own background task via your own :class:`.TaskGroup`.
 
 
-.. autoclass:: chiru.event.dispatcher.StatefulEventDispatcher
+.. autoclass:: chiru.event.dispatcher.ChannelDispatcher
 .. autoclass:: chiru.event.dispatcher.EventContext

@@ -1,29 +1,34 @@
 from collections import defaultdict
-from collections.abc import AsyncGenerator, Awaitable, Callable
-from contextlib import asynccontextmanager
+from collections.abc import Awaitable, Callable, MutableMapping
 from functools import partial
-from typing import Any, NoReturn, TypeVar, final, overload
+from typing import (
+    Any,
+    NoReturn,
+    TypeVar,
+    final,
+    overload,
+)
 
 import anyio
 import attr
 import structlog
+from anyio.abc import ObjectReceiveStream, ObjectSendStream, TaskGroup
 from bitarray.util import zeros
 
 from chiru.bot import ChiruBot
-from chiru.event.chunker import GuildChunker
 from chiru.event.model import DispatchedEvent, Ready, ShardReady
 from chiru.event.parser import CachedEventParser
 from chiru.gateway.collection import GatewayCollection
 from chiru.gateway.event import GatewayDispatch, IncomingGatewayEvent, OutgoingGatewayEvent
-from chiru.util import CapacityLimitedNursery, open_limiting_nursery
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(name=__name__)
 
 GwEventT = TypeVar("GwEventT", bound=IncomingGatewayEvent)
 DsEventT = TypeVar("DsEventT", bound=DispatchedEvent)
 
-# roughly equiv to state.py in curious.
-# TODO: split out the actual event dispatching and the actual event parsing, maybe?
-
-logger: structlog.stdlib.BoundLogger = structlog.get_logger(name=__name__)
+type Dispatch[T: DispatchedEvent] = tuple[EventContext, T]
+type DispatchChannel[T: DispatchedEvent] = ObjectReceiveStream[Dispatch[T]]
+type GatewayChannel[T: IncomingGatewayEvent] = ObjectReceiveStream[T]
 
 
 @attr.s(frozen=True, slots=True, kw_only=True)
@@ -55,165 +60,184 @@ class EventContext:
         await self._collection.send_to_shard(self.shard_id, evt)
 
 
+# conceptually, I can't say I'm a fan of having this own a bunch of the tasks.
+# but in practice, I can't see anyone not using a wrapper to automatically spawn the tasks.
+# so i'll just merge them.
+
+
 @final
-class StatefulEventDispatcher:
+class ChannelDispatcher:
     """
-    An event dispatcher that uses the client's object cache to store stateful objects.
+    An event dispatcher that works by publishing constructed events to the provided channels.
     """
 
-    def __init__(
+    # TODO: Automatically restart spawned tasks
+    @staticmethod
+    async def owns_channel_wrapper[T: DispatchedEvent](
+        channel: DispatchChannel[T], next_fn: Callable[[DispatchChannel[T]], Awaitable[NoReturn]]
+    ) -> NoReturn:
+        async with channel:
+            await next_fn(channel)
+
+    def __init__(self) -> None:
+        # un type hinted because there's no nice way of type hinting this.
+        self._channels: MutableMapping[type[Any], list[ObjectSendStream[Any]]] = defaultdict(list)
+
+        self._to_run_tasks: list[
+            tuple[
+                type[DispatchedEvent],
+                Callable[[DispatchChannel[DispatchedEvent]], Awaitable[NoReturn]],
+                float,
+            ]
+        ] = []
+
+    @overload
+    def register_channel[T: IncomingGatewayEvent](
+        self, evt: type[T], channel: ObjectSendStream[T]
+    ) -> None: ...
+
+    @overload
+    def register_channel[T: DispatchedEvent](
+        self, evt: type[T], channel: ObjectSendStream[tuple[EventContext, T]]
+    ) -> None: ...
+
+    def register_channel[Dispatched: DispatchedEvent, Gateway: IncomingGatewayEvent](
+        self,
+        evt: type[Dispatched] | type[Gateway],
+        channel: ObjectSendStream[Gateway] | ObjectSendStream[tuple[EventContext, Dispatched]],
+    ) -> None:
+        """
+        Registers a single channel with the channel dispatcher. This is the low-level machinery
+        for event handling; see :func:`.register_event_handling_task` for dealing with dispatched
+        events.
+
+        :param evt: The :class:`.DispatchedEvent` or :class:`.IncomingGatewayEvent` to listen to.
+        :param channel: A :class:`.ObjectSendStream` that will have incoming events published on.
+        """
+
+        self._channels[evt].append(channel)
+
+    def register_event_handling_task[Dispatched: DispatchedEvent](
+        self,
+        evt: type[Dispatched],
+        task: Callable[[DispatchChannel[Dispatched]], Awaitable[NoReturn]],
+        *,
+        buffer_size: float = 0,
+    ) -> None:
+        """
+        Registers a single event handler that will be automatically spawned with a channel when
+        the dispatcher starts. This is a more convenient, high-level alternative to
+        :func:`.register_channel` that automatically registers the channel for you.
+
+        :param evt: The type of the :class:`.DispatchedEvent` to listen for.
+        :param task: A callable that will be spawned upon calling :func:`.run_forever`. This
+            callable should receive on the provided channel forever, and never exit.
+
+        :param buffer_size: The maximum buffer size of the created channel. This defaults to zero;
+            i.e. the channel acts as a transfer queue and will pass items directly from receiver
+            to sender without any buffering in order to apply backpressure.
+        """
+
+        self._to_run_tasks.append((evt, task, buffer_size))  # type: ignore  # whatever
+
+    def _setup_tasks(self, nursery: TaskGroup) -> None:
+        for type, task, buf_size in self._to_run_tasks:
+            (write, read) = anyio.create_memory_object_stream[tuple[EventContext, DispatchedEvent]](
+                max_buffer_size=buf_size
+            )
+            self.register_channel(type, write)
+
+            fn = partial(
+                self.owns_channel_wrapper,
+                read,
+                task,
+            )
+            nursery.start_soon(fn)
+
+    async def _dispatch(
+        self,
+        event: IncomingGatewayEvent | DispatchedEvent,
+        context: EventContext | None = None,
+    ):
+        """
+        Dispatches a single incoming event.
+        """
+
+        # no runtime type checking here!
+        handlers = self._channels[type(event)]
+        if not handlers:
+            return
+
+        logger.debug("Dispatching event", event_type=type(event).__name__)
+        to_send = event if context is None else (context, event)
+
+        for handler in handlers:
+            try:
+                await handler.send(to_send)
+            except anyio.BrokenResourceError as e:
+                logger.warning("Handler channel closed", exc_info=e, handling=type(event))
+
+                # a bit slower but it also means we don't allocate a set() every single dispatch
+                # or something similar. also no fucking about with mutating during iteration
+                self._channels[type(event)] = [c for c in handlers if c != handler]
+
+    async def run_forever(
         self,
         bot: ChiruBot,
-        nursery: CapacityLimitedNursery,
-    ):
-        #: The client object that this event dispatcher uses.
-        self.client: ChiruBot = bot
-
-        #: The guild member chunker for this event dispatcher.
-        self.chunker: GuildChunker = GuildChunker()
-
-        #: The cache-based event parser for this dispatcher.
-        self.parser: CachedEventParser = CachedEventParser(
-            bot.object_cache, bot.cached_gateway_info.shards, self.chunker
-        )
-
-        # no point type hinting this, too annoying.
-        self._events = defaultdict(list)  # type: ignore
-
-        self._nursery: CapacityLimitedNursery = nursery
-
-        # global ready state checking.
-        # bit array of the shards that have fired a ShardReady or not.
-        self._ready_shards = zeros(bot.cached_gateway_info.shards)
-
-    @staticmethod
-    async def _run_safely(fn: Callable[[], Awaitable[None]]) -> None:
-        try:
-            await fn()
-        except Exception as e:
-            logger.exception("Unhandled exception caught!", exc_info=e)
-
-    async def _dispatch_event(
-        self,
-        event_klass: type[Any],
-        ctx: EventContext | None,
-        event: Any,
-    ) -> None:
+        collection: GatewayCollection,
+    ) -> NoReturn:
         """
-        Spawns a single event into the nursery.
+        Runs the dispatcher forever using the provided :class:`.ChiruBot` instance.
         """
 
-        if ctx is not None:
-            logger.debug("Dispatching event", event_type=event_klass.__name__, shard=ctx.shard_id)
-        else:
-            logger.debug("Dispatching event", event_type=event_klass.__name__)
+        parser = CachedEventParser(bot.object_cache, bot.cached_gateway_info.shards)
+        ready_shards = zeros(bot.cached_gateway_info.shards)
+        has_fired_ready = False
 
-        if ctx:
-            fns = [
-                partial(self._run_safely, partial(fn, ctx, event))
-                for fn in self._events[event_klass]
-            ]
-        else:
-            fns = [
-                partial(self._run_safely, partial(fn, event)) for fn in self._events[event_klass]
-            ]
+        async with anyio.create_task_group() as nursery:
+            self._setup_tasks(nursery)
 
-        for fn in fns:
-            await self._nursery.start(fn)
+            async for message in collection:
+                await self._dispatch(message)
 
-    @overload
-    def add_event_handler(
-        self, event: type[GwEventT], handler: Callable[[GwEventT], Awaitable[None]]
-    ) -> None: ...
+                if isinstance(message, GatewayDispatch):
+                    events = parser.get_parsed_events(bot.stateful_factory, message)
+                    context = EventContext(
+                        collection=collection,
+                        client=bot,
+                        shard_id=message.shard_id,
+                        dispatch_name=message.event_name,
+                        sequence=message.sequence,
+                    )
 
-    @overload
-    def add_event_handler(
-        self,
-        event: type[DsEventT],
-        handler: Callable[[EventContext, DsEventT], Awaitable[None]],
-    ) -> None: ...
+                    for event in events:
+                        if isinstance(event, ShardReady):
+                            ready_shards[message.shard_id] = True
 
-    def add_event_handler(
-        self,
-        event: type[GwEventT] | type[DsEventT],
-        handler: Callable[[GwEventT], Awaitable[None]]
-        | Callable[[EventContext, DsEventT], Awaitable[None]],
-    ) -> None:
-        """
-        Adds an event handler for a low-level gateway event.
+                            if ready_shards.all() and not has_fired_ready:
+                                await self._dispatch(Ready(), context)
+                                has_fired_ready = True
 
-        :param event: Either an incoming :class:`.IncomingGatewayEvent` or a
-            :class:`.DispatchedEvent` to listen for.
-
-        :param handler: The event handler for said event. The type of this depends on the type of
-            ``event``:
-
-            - If ``event`` is a :class:`.GatewayEvent`, this only takes the event instance.
-            - If ``event`` is a :class:`.DispatchedEvent`, this takes a :class:`.EventContext`
-              as well as the event instance.
-
-            The same function can be registered for multiple events. (You can type hint it with
-            a union type.)
-        """
-
-        logger.info("Registered event", handler=handler.__name__, event_type=event.__name__)
-
-        self._events[event].append(handler)
-
-    async def run_forever(self, *, enable_chunking: bool = True) -> NoReturn:  # type: ignore[misc]
-        """
-        Runs the event dispatcher forever for the provided client.
-
-        :param enable_chunking: If automatic guild member chunking will be enabled or not.
-            See :ref:`guild-chunking` for more information.
-        """
-
-        async with (
-            self.client.start_receiving_events() as stream,
-            anyio.create_task_group() as group,
-        ):
-            if enable_chunking:
-                group.start_soon(partial(self.chunker.send_to_outgoing, collection=stream))
-
-            async for event in stream:
-                await self._dispatch_event(type(event), ctx=None, event=event)
-
-                if not isinstance(event, GatewayDispatch):
-                    continue
-
-                context = EventContext(
-                    client=self.client,
-                    collection=stream,
-                    shard_id=event.shard_id,
-                    dispatch_name=event.event_name,
-                    sequence=event.sequence,
-                )
-
-                for dispatched in self.parser.get_parsed_events(
-                    self.client.stateful_factory, event
-                ):
-                    if isinstance(dispatched, ShardReady):
-                        self._ready_shards[event.shard_id] = True
-
-                        if self._ready_shards.all():
-                            await self._dispatch_event(Ready, context, Ready())
-
-                    await self._dispatch_event(type(dispatched), context, dispatched)
+                        await self._dispatch(event, context=context)
 
 
-@asynccontextmanager
-async def create_stateful_dispatcher(
-    bot: ChiruBot,
-    *,
-    max_tasks: int = 16,
-) -> AsyncGenerator[StatefulEventDispatcher, None]:
+def start_consumer_task[T: DispatchedEvent](
+    nursery: TaskGroup,
+    dispatcher: ChannelDispatcher,
+    evt: type[T],
+    fn: Callable[[DispatchChannel[T]], Awaitable[None]],
+) -> None:
     """
-    Creates a new :class:`.StatefulEventDispatcher`.
-
-    :param bot: The :class:`.ChiruBot` instance to dispatch events from.
-    :param max_tasks: The maximum number of event tasks that can run in parallel before the
-                      dispatcher stops reading from the channel temporarily.
+    Helper for registering a new consumer task. Like
+    :func:`.ChannelDispatcher.register_event_handling_task`, but allows you to bring along your
+    own :class:`.TaskGroup` instead.
     """
 
-    async with open_limiting_nursery(max_tasks=max_tasks) as n:
-        yield StatefulEventDispatcher(bot, n)
+    (write, read) = anyio.create_memory_object_stream[tuple[EventContext, T]]()
+
+    async def _task():
+        async with read:
+            await fn(read)
+
+    dispatcher.register_channel(evt, write)
+    nursery.start_soon(_task)

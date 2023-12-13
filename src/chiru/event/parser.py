@@ -5,7 +5,6 @@ import attr
 import structlog
 
 from chiru.cache import ObjectCache
-from chiru.event.chunker import GuildChunker
 from chiru.event.model import (
     BulkPresences,
     ChannelCreate,
@@ -62,22 +61,14 @@ class CachedEventParser:
         self,
         cache: ObjectCache,
         shard_count: int,
-        chunker: GuildChunker | None = None,
     ) -> None:
         """
         :param cache: The :class:`.ObjectCache` to store the created objects in.
         :param shard_count: The number of shards that the bot is using. Used primarily for handling
             guild streaming and per-shard READY.
-
-        :param chunker: The :class:`.GuildChunker` to use for automatically chunking incoming
-            guilds. This may be None if you don't want to have automatic member chunking.
-
-            See :ref:`guild-chunking` for more information.
         """
 
         self._cache: ObjectCache = cache
-
-        self._chunker: GuildChunker | None = chunker
 
         #: A list of per-shard shared mutable state.
         self.per_shard_state: list[PerShardState] = [PerShardState()] * shard_count
@@ -177,9 +168,6 @@ class CachedEventParser:
         if presences:
             yield BulkPresences(guild=created_guild, child_events=presences)
 
-        if self._chunker is not None:
-            self._chunker.handle_joined_guild(event.shard_id, created_guild)
-
     def _parse_guild_members_chunk(
         self, event: GatewayDispatch, factory: ModelObjectFactory
     ) -> Iterable[DispatchedEvent]:
@@ -219,9 +207,6 @@ class CachedEventParser:
             chunk_count=event.body["chunk_count"],
             nonce=event.body.get("nonce"),
         )
-
-        if self._chunker:
-            self._chunker.handle_member_chunk(event.shard_id, evt)
 
         yield evt
 

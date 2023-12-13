@@ -1,8 +1,7 @@
 from chiru.event.chunker import GuildChunker as GuildChunker
 from chiru.event.dispatcher import (
+    ChannelDispatcher as ChannelDispatcher,
     EventContext as EventContext,
-    StatefulEventDispatcher as StatefulEventDispatcher,
-    create_stateful_dispatcher as create_stateful_dispatcher,
 )
 from chiru.event.model import (
     BulkPresences as BulkPresences,
