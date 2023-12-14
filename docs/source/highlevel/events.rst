@@ -10,7 +10,7 @@ object(s) inside the event.
 There are two ways of handling dispatched events in Chiru:
 
 - The linear way, where you subscribe directly to the stream of events.
-- The dispatcher way, using a :class:`.StatefulEventDispatcher`.
+- The dispatcher way, using a :class:`.ChannelDispatcher`.
 
 Linear Events
 -------------

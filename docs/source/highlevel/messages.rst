@@ -96,16 +96,17 @@ New messages are received on the :class:`.MessageCreate` event.
 
     logger = structlog.get_logger()
 
-    async def log_message(ctx: EventContext, event: MessageCreate) -> None:
-        logger.info(
-            "Received message", 
-            shard_id=ctx.shard_id, 
-            content=event.message.content, 
-            channel=event.channel.id,
-            sender=event.message.author.id,
-        )
+    async def log_messages(channel: DispatchChannel[MessageCreate]) -> NoReturn:
+        async for (ctx, event) in channel:
+            logger.info(
+                "Received message", 
+                shard_id=ctx.shard_id, 
+                content=event.message.content, 
+                channel=event.channel.id,
+                sender=event.message.author.id,
+            )
 
-    dispatcher.add_event_handler(MessageCreate, event)
+    dispatcher.register_event_handling_task(MessageCreate, log_messages)
 
 Updated Messages
 ~~~~~~~~~~~~~~~~
@@ -117,10 +118,17 @@ Edited messages (or messages that are otherwise updated) are received via the
 
 .. code-block:: python
 
-    async def name_n_shame(ctx: EventContext, event: MessageUpdate) -> None:
-        await event.channel.send_message(f"Uh oh! User <@{event.message.author.id}> made a typo!")
+    async def name_n_shame(channel: DispatchChannel[MessageUpdate]) -> NoReturn:
+        async with anyio.create_task_group() as group:
+            async for (ctx, message) in channel:
+                fn = partial(
+                    event.channel.send_message,
+                    f"Uh oh! User <@{event.message.author.id}> made a typo!"
+                )
+
+                group.start_soon(fn)
     
-    dispatcher.add_event_handler(MessageUpdate, name_n_shame)
+    dispatcher.register_event_handling_task(MessageUpdate, name_n_shame)
 
 .. warning::
 

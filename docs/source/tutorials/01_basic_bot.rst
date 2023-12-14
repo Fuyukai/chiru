@@ -115,34 +115,36 @@ What we did above was *not* a bot, but it was a way of
 first. Now, let's make the actual bot.
 
 Most (practically, all the useful ones) bots are based around responding to :ref:`events`. To
-respond to messages saying our name, we need an event handler for the ``MESSAGE_CREATE`` event.
+respond to messages saying our name, we need an event handler for the :class:`.MessageCreate` event.
 Let's create a dummy handler that just prints every message we get:
 
 .. code-block:: python
 
-    from chiru.event import EventContext, MessageCreate
+    from chiru.event import EventContext, MessageCreate, DispatchChannel
 
-    async def handle_message_create(context: EventContext, evt: MessageCreate):
-        print("Got a message:", evt.message.content)
+    async def handle_message_creates(channel: DispatchChannel):
+        async for (ctx, evt) in channel:
+            print("Got a message:", evt.message.content)
 
-Now, we need to wire it up to a bot. We can do this with the :class:`.StatefulEventDispatcher`:
+Now, we need to wire it up to a bot. We can do this with the :class:`.ChannelDispatcher`:
 
 .. code-block:: python
 
-    from chiru.event import create_stateful_dispatcher
+    from chiru.event import ChannelDispatcher
     from chiru.bot import open_bot
 
     # Get it from the Developer Portal.
     TOKEN = "..."
 
     async def main():
+        dispatcher = ChannelDispatcher()
+        dispatcher.register_event_handling_task(MessageCreate, handle_message_creates)
+
         async with (
             open_bot(TOKEN) as bot,
-            create_stateful_dispatcher(bot) as dispatcher
+            bot.start_receiving_events() as collection
         ):
-            dispatcher.add_event_handler(MessageCreate, handle_message_create)
-
-            await dispatcher.run_forever()
+            await dispatcher.run_forever(bot, collection)
 
 Once again, you can run your ``my-bot`` script in your command line, and then start sending some
 messages in a channel you and your bot share. 
@@ -155,14 +157,15 @@ that don't meet certain criteria:
 
 .. code-block:: python
 
-    async def handle_message_create(context: EventContext, evt: MessageCreate):
-        # No bot messages! You don't want to get stuck in a loop.
-        if evt.message.author.bot:
-            return
-        
-        # Ignore all messages that aren't about me.
-        if "bot name" not in evt.message.content:
-            return
+    async def handle_message_creates(channel: DispatchChannel):
+        async for (ctx, evt) in channel:
+            # No bot messages! You don't want to get stuck in a loop.
+            if evt.message.author.bot:
+                continue
+            
+            # Ignore all messages that aren't about me.
+            if "bot name" not in evt.message.content:
+                continue
 
 Now, we can respond to a message on the channel it came through, like so:
 
@@ -170,6 +173,11 @@ Now, we can respond to a message on the channel it came through, like so:
 
     channel = evt.message.channel
     await channel.messages.send(content="You talking to me?")
+
+.. warning::
+
+    This will block all event handling during the ``.send``. Consider using a :class:`.TaskGroup`
+    to send it in the background. 
 
 .. _Poetry: https://python-poetry.org/docs/
 .. _PDM: https://pdm-project.org/latest/
