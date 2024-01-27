@@ -80,6 +80,10 @@ class GuildChunker:
                 await collection.send_to_shard(shard_id, msg)
 
     async def handle_member_chunk(self, channel: DispatchChannel[GuildMemberChunk]) -> None:
+        """
+        Event handler that handles all incoming member chunks.
+        """
+
         async for _, evt in channel:
             # the parser is responsible for actually loading all of the members...
             # this mostly just tracks guilds that are fully chunked
@@ -100,7 +104,7 @@ class GuildChunker:
         channel: DispatchChannel[AnyGuildJoined],
     ) -> None:
         """
-        Handles a single incoming guild.
+        Event handler that handles all incoming joined guilds.
         """
 
         async for ctx, evt in channel:

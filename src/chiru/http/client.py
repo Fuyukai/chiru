@@ -139,7 +139,7 @@ class ChiruHttpClient:
         # this just checkpoints if the global ratelimit time is in the past.
         await self._wait_for_global_ratelimit()
 
-        for tries in range(0, 5):
+        for tries in range(5):
             rl = self._ratelimiter.get_ratelimit_for_bucket((method, bucket))
             async with rl.acquire_ratelimit_token():
                 logger.debug("HTTP request pending", method=method, path=path, attempt=tries + 1)

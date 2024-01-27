@@ -71,7 +71,7 @@ class ChiruBot:
                 self.cached_gateway_info.shards,
             )
 
-            for shard in range(0, self.cached_gateway_info.shards):
+            for shard in range(self.cached_gateway_info.shards):
                 wrapper._start_shard(shard)
 
             yield wrapper

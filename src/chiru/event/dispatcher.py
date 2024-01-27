@@ -73,7 +73,7 @@ class ChannelDispatcher:
 
     # TODO: Automatically restart spawned tasks
     @staticmethod
-    async def owns_channel_wrapper[T: DispatchedEvent](
+    async def _owns_channel_wrapper[T: DispatchedEvent](
         channel: DispatchChannel[T], next_fn: Callable[[DispatchChannel[T]], Awaitable[NoReturn]]
     ) -> NoReturn:
         async with channel:
@@ -101,10 +101,10 @@ class ChannelDispatcher:
         self, evt: type[T], channel: ObjectSendStream[tuple[EventContext, T]]
     ) -> None: ...
 
-    def register_channel[Dispatched: DispatchedEvent, Gateway: IncomingGatewayEvent](
+    def register_channel[Dispatched: DispatchedEvent, GwEvt: IncomingGatewayEvent](
         self,
-        evt: type[Dispatched] | type[Gateway],
-        channel: ObjectSendStream[Gateway] | ObjectSendStream[tuple[EventContext, Dispatched]],
+        evt: type[GwEvt] | type[Dispatched],
+        channel: ObjectSendStream[GwEvt] | ObjectSendStream[tuple[EventContext, Dispatched]],  # type: ignore  # pyright bug?
     ) -> None:
         """
         Registers a single channel with the channel dispatcher. This is the low-level machinery
@@ -148,7 +148,7 @@ class ChannelDispatcher:
             self.register_channel(type, write)
 
             fn = partial(
-                self.owns_channel_wrapper,
+                self._owns_channel_wrapper,
                 read,
                 task,
             )

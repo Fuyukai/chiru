@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import typing
 from collections.abc import Mapping
 from typing import Any, Literal
 
@@ -40,7 +41,7 @@ class RoleAdditionalMetadata:
     guild_connections: bool = attr.ib(default=False)
 
     @classmethod
-    def struct_hook(cls, data: Mapping[str, int | Literal[None]], _: Any) -> RoleAdditionalMetadata:
+    def struct_hook(cls, data: Mapping[str, int | Literal[None]], _: Any) -> RoleAdditionalMetadata:  # noqa: D102
         # what the everliving fuck is this structure.
         # "booleans are represented with null" what? what the fuck?
         # why not just make the fields always there?
@@ -71,7 +72,7 @@ class RawRole(DiscordObject, HasIcon):
     """
 
     @classmethod
-    def configure_converter(cls, converter: Converter) -> None:
+    def configure_converter(cls, converter: Converter) -> None:  # noqa: D102
         for klass in (cls, Role):
             converter.register_structure_hook(
                 klass,
@@ -132,6 +133,7 @@ class RawRole(DiscordObject, HasIcon):
     role_metadata: RoleAdditionalMetadata = attr.ib(default=RoleAdditionalMetadata())
 
     @property
+    @typing.override
     def icon_url(self) -> str | None:
         if self.icon_hash is None:
             return None

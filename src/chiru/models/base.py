@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, Protocol, override, runtime_checkable
 
 import arrow
 import attr
@@ -34,14 +34,16 @@ class DiscordObject:
         ts = ((int(self.id) >> 22) + DISCORD_EPOCH) / 1000
         return arrow.get(ts)
 
+    @override
     def __hash__(self) -> int:
         return hash(self.id)
 
+    @override
     def __eq__(self, __value: object) -> bool:
         if not isinstance(__value, DiscordObject):
             return NotImplemented
 
-        return id == __value.id
+        return self.id == __value.id
 
     def __int__(self) -> int:
         return self.id
@@ -63,6 +65,7 @@ class StatefulMixin:
         self._client = bot
 
 
+@runtime_checkable
 class HasIcon(Protocol):
     """
     Protocol for any object that is capable of having an icon (usually stored in the form of an

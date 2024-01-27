@@ -43,7 +43,7 @@ logger: structlog.stdlib.BoundLogger = structlog.get_logger(name=__name__)
 
 
 @attr.s(slots=True)
-class PerShardState:
+class _PerShardState:
     is_ready: bool = attr.ib(default=False)
     guilds_remaining: int = attr.ib(default=0)
 
@@ -69,9 +69,7 @@ class CachedEventParser:
         """
 
         self._cache: ObjectCache = cache
-
-        #: A list of per-shard shared mutable state.
-        self.per_shard_state: list[PerShardState] = [PerShardState()] * shard_count
+        self._per_shard_state: list[_PerShardState] = [_PerShardState()] * shard_count
 
     def get_parsed_events(
         self, factory: ModelObjectFactory, event: GatewayDispatch
@@ -102,7 +100,7 @@ class CachedEventParser:
         """
 
         guilds = [factory.make_guild(g) for g in event.body["guilds"]]
-        shard_state = self.per_shard_state[event.shard_id]
+        shard_state = self._per_shard_state[event.shard_id]
         if len(guilds) <= 0:
             # if there's no guilds for this shard (what?), make sure that the bot doesn't get stuck
             # waiting for guild streams forever.
@@ -145,7 +143,7 @@ class CachedEventParser:
         if not guild_existed:
             yield GuildJoined(created_guild)
         else:
-            per_shard_state = self.per_shard_state[event.shard_id]
+            per_shard_state = self._per_shard_state[event.shard_id]
 
             if not per_shard_state.is_ready:
                 yield GuildStreamed(created_guild)

@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol, override
 
 import attr
-from typing_extensions import override
 
 if TYPE_CHECKING:  # Make sphinx happy!
     from chiru.models.base import DiscordObject

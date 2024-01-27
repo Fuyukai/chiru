@@ -106,7 +106,7 @@ class Ratelimit:
                     self._max_count - self._semaphore.value - self._requests_still_processing
                 )
                 logger.debug("Ratelimit reset", bucket=self._bucket, tokens=to_refill)
-                for _ in range(0, to_refill):
+                for _ in range(to_refill):
                     self._semaphore.release()
 
                 self._loop_started = anyio.Event()
@@ -114,7 +114,7 @@ class Ratelimit:
             # oops, we got cancelled or had an exception or whatever.
             # refill it in case anyone's waiting to avoid deadlocks, then tell the parent to
             # section 21 us
-            for _ in range(0, self._max_count):
+            for _ in range(self._max_count):
                 self._semaphore.release()
 
             self._manager._task_got_too_lonely(self._bucket)

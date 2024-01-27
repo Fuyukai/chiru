@@ -3,6 +3,10 @@ import attr
 
 @attr.s(frozen=True, kw_only=True, slots=True)
 class GatewaySessionLimits:
+    """
+    Wraps information about the sessions for a bot in the ``/gateway/bot`` response.
+    """
+
     #: The number of session starts that the current bot is allowed within the limit.
     total: int = attr.ib()
 

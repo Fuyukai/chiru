@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import typing
 from collections.abc import Iterator, Mapping
 from functools import partial
 from typing import TYPE_CHECKING, Any, TypeVar, cast, final
@@ -49,12 +50,15 @@ class GuildChannelList(Mapping[int, AnyGuildChannel]):
 
         return GuildChannelList(channels)
 
+    @typing.override
     def __getitem__(self, __key: int) -> AnyGuildChannel:
         return self._channels[__key]
 
+    @typing.override
     def __iter__(self) -> Iterator[int]:
         return iter(self._channels)
 
+    @typing.override
     def __len__(self) -> int:
         return len(self._channels)
 
@@ -106,12 +110,15 @@ class GuildMemberList(Mapping[int, Member]):
         self._members[new_member.id] = new_member
         return (old_member, new_member)
 
+    @typing.override
     def __getitem__(self, __key: int) -> Member:
         return self._members[__key]
 
+    @typing.override
     def __iter__(self) -> Iterator[int]:
         return iter(self._members)
 
+    @typing.override
     def __len__(self) -> int:
         return len(self._members)
 
@@ -155,15 +162,19 @@ class GuildEmojis(Mapping[int, RawCustomEmoji]):
 
         return cls.from_update_packet(body["emojis"], factory)
 
+    @typing.override
     def __getitem__(self, key: int) -> RawCustomEmoji:
         return self._emojis[key]
 
+    @typing.override
     def __iter__(self) -> Iterator[int]:
         return iter(self._emojis)
 
+    @typing.override
     def __len__(self) -> int:
         return len(self._emojis)
 
+    @typing.override
     def __repr__(self) -> str:
         return repr(self._emojis)
 
@@ -193,12 +204,15 @@ class GuildRolesList(Mapping[int, Role]):
 
         return GuildRolesList(roles=roles)
 
+    @typing.override
     def __getitem__(self, key: int) -> Role:
         return self._roles[key]
 
+    @typing.override
     def __iter__(self) -> Iterator[int]:
         return iter(self._roles)
 
+    @typing.override
     def __len__(self) -> int:
         return len(self._roles)
 
@@ -220,7 +234,7 @@ class RawGuild(DiscordObject, HasIcon):
     """
 
     @staticmethod
-    def unmap_to_id(
+    def _unmap_to_id(
         converter: Converter,
         data: Any,
         provided_type: type[DObjT],
@@ -237,11 +251,11 @@ class RawGuild(DiscordObject, HasIcon):
         return {i.id: i for i in items}  # type: ignore
 
     @classmethod
-    def configure_converter(cls, converter: Converter) -> None:
-        raw_channel_fn = override(struct_hook=partial(cls.unmap_to_id, converter))
-        raw_member_fn = override(struct_hook=partial(cls.unmap_to_id, converter))
-        raw_emoji_fn = override(struct_hook=partial(cls.unmap_to_id, converter))
-        raw_roles_fn = override(struct_hook=partial(cls.unmap_to_id, converter))
+    def configure_converter(cls, converter: Converter) -> None:  # noqa: D102
+        raw_channel_fn = override(struct_hook=partial(cls._unmap_to_id, converter))
+        raw_member_fn = override(struct_hook=partial(cls._unmap_to_id, converter))
+        raw_emoji_fn = override(struct_hook=partial(cls._unmap_to_id, converter))
+        raw_roles_fn = override(struct_hook=partial(cls._unmap_to_id, converter))
 
         converter.register_structure_hook(
             RawGuild,
@@ -307,6 +321,7 @@ class RawGuild(DiscordObject, HasIcon):
         return self.roles[self.id]
 
     @property
+    @typing.override
     def icon_url(self) -> str | None:
         if not self.icon_hash:
             return None
@@ -347,6 +362,7 @@ class Guild(RawGuild, StatefulMixin):
         return self.members[self.owner_id]
 
     @property
+    @typing.override
     def default_role(self) -> Role:
         """
         Gets the default :class:`.Role` for this guild (the @everyone role).

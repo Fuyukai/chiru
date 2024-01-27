@@ -1,3 +1,4 @@
+# pyright: reportImplicitOverride=false
 from __future__ import annotations
 
 from typing import Self
@@ -29,7 +30,7 @@ class ReadOnlyPermissions:
         """
 
         bf = bitarray(128)
-        for i in range(0, 128):
+        for i in range(128):
             bf[i] = 1
 
         return cls(bitfield=bf)
@@ -420,7 +421,11 @@ class ReadOnlyPermissions:
         return self._bitfield[-47] == 1
 
 
-class WriteablePermissions(ReadOnlyPermissions):
+class WriteablePermissions(ReadOnlyPermissions): 
+    """
+    Like :class:`.ReadOnlyPermissions`, but with setters.
+    """
+
     @property
     def create_instant_invites(self) -> bool:
         """

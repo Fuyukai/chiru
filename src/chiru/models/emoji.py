@@ -21,7 +21,7 @@ class RawCustomEmoji(DiscordObject):
     """
 
     @classmethod
-    def configure_converter(cls, converter: Converter) -> None:
+    def configure_converter(cls, converter: Converter) -> None:  # noqa: D102
         converter.register_structure_hook(
             cls,
             cattr.gen.make_dict_structure_fn(

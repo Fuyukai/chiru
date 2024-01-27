@@ -18,15 +18,15 @@ from chiru.models.role import Role
 from chiru.models.user import RawUser
 
 
-def unstructure_arrow(it: arrow.Arrow) -> str:
+def _unstructure_arrow(it: arrow.Arrow) -> str:
     return str(it.isoformat())
 
 
-def unstructure_perms(it: ReadOnlyPermissions) -> str:
+def _unstructure_perms(it: ReadOnlyPermissions) -> str:
     return str(it)
 
 
-def structure_perms(it: str, type: Any) -> ReadOnlyPermissions | WriteablePermissions:
+def _structure_perms(it: str, type: Any) -> ReadOnlyPermissions | WriteablePermissions:
     perms = int(it)
     ba = int2ba(perms)
 
@@ -50,11 +50,11 @@ def create_chiru_converter() -> Converter:
     )
     configure_converter(converter)
     converter.register_structure_hook(arrow.Arrow, lambda it, typ: arrow.get(it))
-    converter.register_unstructure_hook(arrow.Arrow, unstructure_arrow)
+    converter.register_unstructure_hook(arrow.Arrow, _unstructure_arrow)
 
     for klass in (ReadOnlyPermissions, WriteablePermissions):
-        converter.register_structure_hook(klass, structure_perms)
-        converter.register_unstructure_hook(klass, unstructure_perms)
+        converter.register_structure_hook(klass, _structure_perms)
+        converter.register_unstructure_hook(klass, _unstructure_perms)
 
     Embed.configure_converter(converter)
     RawUser.configure_converter(converter)

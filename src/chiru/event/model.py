@@ -63,8 +63,7 @@ class AnyGuildJoined(DispatchedEvent, abc.ABC):
     Base type for any event that concerns joining a guild.
     """
 
-    @property
-    def guild(self) -> Guild: ...
+    guild: Guild
 
 
 @attr.s(slots=True, frozen=True)

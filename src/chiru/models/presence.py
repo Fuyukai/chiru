@@ -18,6 +18,10 @@ type SendablePresenceStatus = PresenceStatus | Literal["invisible", "offline"]
 
 
 class ActivityType(enum.IntEnum):
+    """
+    Enumeration of the possible types of activities.
+    """
+
     GAME = 0
     STREAMING = 1
     LISTENING = 2
@@ -28,6 +32,10 @@ class ActivityType(enum.IntEnum):
 
 @attr.s(slots=True, kw_only=True)
 class Activity:
+    """
+    A single activity in a presence.
+    """
+
     #: The name of this activity. This will be the string "Custom Activity" for custom statuses.
     name: str = attr.ib()
 
@@ -64,7 +72,7 @@ class Presence:
     """
 
     @classmethod
-    def configure_converter(cls, converter: Converter) -> None:
+    def configure_converter(cls, converter: Converter) -> None:  # noqa: D102
         converter.register_structure_hook(
             cls,
             cattr.gen.make_dict_structure_fn(

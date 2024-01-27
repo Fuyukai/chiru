@@ -73,6 +73,10 @@ class GatewayOp(enum.IntEnum):
 
 @attr.s(kw_only=True)
 class GatewaySharedState:
+    """
+    Wraps various state that needs to outlive the gateway inner loop.
+    """
+
     #: The URL to use whenever we need to reconnect to the gateway.
     reconnect_url: str = attr.ib()
 
@@ -108,6 +112,10 @@ class GatewaySharedState:
         self.logger = logger.bind(shard_id=self.shard_id)
 
     def reset(self) -> None:
+        """
+        Resets the current gateway state.
+        """
+
         self.session_id = None
         self.sequence = 0
         self.heartbeat_acks = 0
@@ -124,6 +132,10 @@ class GatewaySenderWrapper:
         self.logger = logger
 
     async def send_heartbeat(self, *, seq: int) -> None:
+        """
+        Sends a single heartbeat to this gateway.
+        """
+
         self.logger.debug(
             "Outgoing message",
             message_type=GatewayOp.HEARTBEAT,
@@ -142,6 +154,10 @@ class GatewaySenderWrapper:
         shard_count: int,
         intents: int,
     ) -> None:
+        """
+        Sends a single IDENTIFY request to this gateway.
+        """
+
         self.logger.debug("Outgoing message", message_type=GatewayOp.IDENTIFY)
 
         body = {
@@ -159,6 +175,10 @@ class GatewaySenderWrapper:
         await self._ws.send_message(json.dumps(body))
 
     async def send_resume(self, *, token: str, session_id: str, seq: int) -> None:
+        """
+        Sends a single RESUME request to this gateway.
+        """
+
         self.logger.debug(
             "Outgoing message",
             message_type=GatewayOp.RESUME,
@@ -177,6 +197,10 @@ class GatewaySenderWrapper:
         await self._ws.send_message(json.dumps(body))
 
     async def send_chunk_request(self, payload: GatewayMemberChunkRequest) -> None:
+        """
+        Sends a single member chunk request to this gateway.
+        """
+
         self.logger.debug(
             "Outgoing message",
             message_type=GatewayOp.REQUEST_MEMBERS,
@@ -206,6 +230,10 @@ class GatewaySenderWrapper:
         await self._ws.send_message(json.dumps(body))
 
     async def send_presence_update(self, payload: GatewayPresenceUpdate) -> None:
+        """
+        Sends a single presence update message to this gateway.
+        """
+
         self.logger.debug(
             "Outgoing message",
             message_type=GatewayOp.PRESENCE,

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import typing
 from types import NotImplementedType
 from typing import TYPE_CHECKING
 
@@ -24,7 +25,7 @@ class RawUser(DiscordObject, HasIcon):
     """
 
     @classmethod
-    def configure_converter(cls, converter: cattrs.Converter) -> None:
+    def configure_converter(cls, converter: cattrs.Converter) -> None:  # noqa: D102
         for klass in (cls, User):
             converter.register_structure_hook(
                 klass,
@@ -61,6 +62,7 @@ class RawUser(DiscordObject, HasIcon):
     system: bool = attr.ib(default=False)
 
     @property
+    @typing.override
     def icon_url(self) -> str | None:
         if not self.avatar:
             return None
@@ -78,9 +80,11 @@ class RawUser(DiscordObject, HasIcon):
 
         return self.username
 
+    @typing.override
     def __hash__(self) -> int:
         return hash(self.id)
 
+    @typing.override
     def __eq__(self, other: object) -> bool | NotImplementedType:
         if not isinstance(other, RawUser):
             return NotImplemented

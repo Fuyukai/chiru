@@ -100,14 +100,14 @@ class RawMessageReaction:
     """
 
     @staticmethod
-    def decode_emoji_reference(data: Any, type: type[Any]) -> UnicodeEmoji | int:
+    def decode_emoji_reference(data: Any, type: type[Any]) -> UnicodeEmoji | int:  # noqa: D102
         if (id := data["id"]) is not None:
             return cast(int, id)
 
         return UnicodeEmoji(data["name"])
 
     @classmethod
-    def configure_converter(cls, converter: Converter) -> None:
+    def configure_converter(cls, converter: Converter) -> None:  # noqa: D102
         converter.register_structure_hook(
             cls,
             make_dict_structure_fn(
@@ -143,7 +143,7 @@ class RawMessage(DiscordObject):
     """
 
     @classmethod
-    def configure_converter(cls, converter: Converter) -> None:
+    def configure_converter(cls, converter: Converter) -> None:  # noqa: D102
         for klass in (RawMessage, Message):
             converter.register_structure_hook(
                 klass,
@@ -215,7 +215,7 @@ class Message(RawMessage, StatefulMixin):
             return self._client.object_cache.get_available_guild(self.guild_id)
 
         if isinstance(self.channel, AnyGuildChannel):
-            self.guild_id: int = self.channel.guild_id
+            self.guild_id: int | None = self.channel.guild_id
             return self.channel.guild
 
         return None
