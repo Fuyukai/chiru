@@ -219,6 +219,14 @@ class MessageCreate(DispatchedEvent):
         """
 
         return self.message.channel
+    
+    @property
+    def author(self) -> User | Member:
+        """
+        Gets the author that sent the message.
+        """
+
+        return self.message.author
 
 
 @attr.s(frozen=True, slots=True, kw_only=True)
