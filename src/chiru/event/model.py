@@ -13,19 +13,6 @@ from chiru.models.presence import Presence
 from chiru.models.role import Role
 from chiru.models.user import User
 
-__all__ = (
-    "DispatchedEvent",
-    "Connected",
-    "ShardReady",
-    "Ready",
-    "GuildStreamed",
-    "GuildAvailable",
-    "GuildJoined",
-    "InvalidGuildChunk",
-    "GuildMemberChunk",
-    "MessageCreate",
-)
-
 
 class DispatchedEvent:
     """
