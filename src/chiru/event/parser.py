@@ -26,6 +26,9 @@ from chiru.event.model import (
     MessageDelete,
     MessageUpdate,
     PresenceUpdate,
+    RoleCreate,
+    RoleDelete,
+    RoleUpdate,
     ShardReady,
 )
 from chiru.gateway.event import GatewayDispatch
@@ -431,3 +434,37 @@ class CachedEventParser:
         message = factory.make_message(event.body)
 
         yield MessageUpdate(message=message)
+
+    def _parse_guild_role_create(
+        self, event: GatewayDispatch, factory: ModelObjectFactory
+    ) -> Iterable[DispatchedEvent]:
+        guild = self._cache.get_available_guild(int(event.body["guild_id"]))
+        assert guild, "die discord again"
+
+        role = factory.make_role(event.body["role"])
+        guild.roles._roles[role.id] = role
+
+        yield RoleCreate(guild=guild, role=role)
+
+    def _parse_guild_role_update(
+        self, event: GatewayDispatch, factory: ModelObjectFactory
+    ) -> Iterable[DispatchedEvent]:
+        guild = self._cache.get_available_guild(int(event.body["guild_id"]))
+        assert guild, "i'm gettin tired of writing assertion messages"
+
+        role = factory.make_role(event.body["role"])
+        old_role = guild.roles._roles.pop(role.id)
+        guild.roles._roles[role.id] = role
+
+        yield RoleUpdate(guild=guild, old_role=old_role, new_role=role)
+
+    def _parse_guild_role_delete(
+        self,
+        event: GatewayDispatch,
+        factory: ModelObjectFactory,
+    ) -> Iterable[DispatchedEvent]:
+        guild = self._cache.get_available_guild(int(event.body["guild_id"]))
+        assert guild, "?"
+
+        old_role = guild.roles._roles.pop(int(event.body["role_id"]))
+        yield RoleDelete(guild=guild, removed_role=old_role)

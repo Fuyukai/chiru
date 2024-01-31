@@ -10,6 +10,7 @@ from chiru.models.guild import Guild
 from chiru.models.member import Member
 from chiru.models.message import Message
 from chiru.models.presence import Presence
+from chiru.models.role import Role
 from chiru.models.user import User
 
 __all__ = (
@@ -219,7 +220,7 @@ class MessageCreate(DispatchedEvent):
         """
 
         return self.message.channel
-    
+
     @property
     def author(self) -> User | Member:
         """
@@ -320,6 +321,7 @@ class ChannelUpdate(DispatchedEvent):
     """
 
     #: The old :class:`.BaseChannel` object, if any existed and was cached.
+    #: This may be None for old DM channels.
     old_channel: BaseChannel | None = attr.ib()
 
     #: The updated :class:`.BaseChannel` object.
@@ -358,6 +360,7 @@ class PresenceUpdate(DispatchedEvent):
 
 
 @attr.s(slots=True, frozen=True, kw_only=True)
+@final
 class BulkPresences(DispatchedEvent):
     """
     Published when a large chunk of presences is received. This is published in one of three
@@ -375,3 +378,48 @@ class BulkPresences(DispatchedEvent):
     #: The collection of :class:`.PresenceUpdate` events that were created from the newly joined
     #: guild. This will always be non-empty.
     child_events: Collection[PresenceUpdate] = attr.ib()
+
+
+@attr.s(slots=True, frozen=True, kw_only=True)
+@final
+class RoleCreate(DispatchedEvent):
+    """
+    Published when a role is created in a guild.
+    """
+
+    #: The guild that this role was created in.
+    guild: Guild = attr.ib()
+
+    #: The role that was created.
+    role: Role = attr.ib()
+
+
+@attr.s(slots=True, frozen=True, kw_only=True)
+@final
+class RoleUpdate(DispatchedEvent):
+    """
+    Published when a role is updated in a guild.
+    """
+
+    #: The guild that this role was updated in.
+    guild: Guild = attr.ib()
+
+    #: The old role object.
+    old_role: Role = attr.ib()
+
+    #: The new role object.
+    new_role: Role = attr.ib()
+
+
+@attr.s(slots=True, frozen=True, kw_only=True)
+@final
+class RoleDelete(DispatchedEvent):
+    """
+    Published when a role is deleted in a guild.
+    """
+
+    #: The guild that this role was deleted from.
+    guild: Guild = attr.ib()
+
+    #: The old role object.
+    removed_role: Role = attr.ib()

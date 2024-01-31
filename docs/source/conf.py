@@ -70,6 +70,7 @@ html_theme_options = {
     "style_external_links": True,
 }
 
+
 def skip_init_on_models(app, what, name, obj, skip, options):
     # gross and hacky.
 
@@ -82,10 +83,11 @@ def skip_init_on_models(app, what, name, obj, skip, options):
     if obj.__module__.startswith("chiru.models"):
         if obj.__module__ not in ("chiru.models.factory", "chiru.models.base"):
             return True
-        
+
         return skip
-    
+
     return skip
+
 
 def setup(app):
     app.connect("autodoc-skip-member", skip_init_on_models)

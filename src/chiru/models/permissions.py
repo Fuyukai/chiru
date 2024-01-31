@@ -421,7 +421,7 @@ class ReadOnlyPermissions:
         return self._bitfield[-47] == 1
 
 
-class WriteablePermissions(ReadOnlyPermissions): 
+class WriteablePermissions(ReadOnlyPermissions):
     """
     Like :class:`.ReadOnlyPermissions`, but with setters.
     """

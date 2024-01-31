@@ -26,6 +26,9 @@ from chiru.event.model import (
     MessageUpdate as MessageUpdate,
     PresenceUpdate as PresenceUpdate,
     Ready as Ready,
+    RoleCreate as RoleCreate,
+    RoleDelete as RoleDelete,
+    RoleUpdate as RoleUpdate,
     ShardReady as ShardReady,
 )
 from chiru.event.parser import CachedEventParser as CachedEventParser

@@ -90,10 +90,12 @@ class ChiruHttpClient:
             package_version = version("chiru")
             user_agent = f"DiscordBot (https://github.com/Fuyukai/chiru, {package_version})"
 
-        self._http.headers.update({
-            "Authorization": f"Bot {token}",
-            "User-Agent": user_agent,
-        })
+        self._http.headers.update(
+            {
+                "Authorization": f"Bot {token}",
+                "User-Agent": user_agent,
+            }
+        )
 
         # mypy doesn't like these.
         self._http.base_url = self.endpoints.base_url  # type: ignore
@@ -243,7 +245,8 @@ class ChiruHttpClient:
         return CONVERTER.structure(resp.json(), OAuthApplication)
 
     @overload
-    async def create_direct_message_channel(self, *, user_id: int) -> RawChannel: ...
+    async def create_direct_message_channel(self, *, user_id: int) -> RawChannel:
+        ...
 
     @overload
     async def create_direct_message_channel(
@@ -251,7 +254,8 @@ class ChiruHttpClient:
         *,
         user_id: int,
         factory: ModelObjectFactory,
-    ) -> DirectMessageChannel: ...
+    ) -> DirectMessageChannel:
+        ...
 
     async def create_direct_message_channel(
         self, *, user_id: int, factory: ModelObjectFactory | None = None
@@ -280,12 +284,14 @@ class ChiruHttpClient:
         return CONVERTER.structure(response.json(), RawChannel)
 
     @overload
-    async def get_message(self, *, channel_id: int, message_id: int) -> RawMessage: ...
+    async def get_message(self, *, channel_id: int, message_id: int) -> RawMessage:
+        ...
 
     @overload
     async def get_message(
         self, *, channel_id: int, message_id: int, factory: ModelObjectFactory
-    ) -> Message: ...
+    ) -> Message:
+        ...
 
     async def get_message(
         self,
@@ -326,7 +332,8 @@ class ChiruHttpClient:
         content: str | None = None,
         embed: Embed | Iterable[Embed] | None = None,
         allowed_mentions: AllowedMentions | None = None,
-    ) -> RawMessage: ...
+    ) -> RawMessage:
+        ...
 
     @overload
     async def send_message(
@@ -337,7 +344,8 @@ class ChiruHttpClient:
         embed: Embed | Iterable[Embed] | None = None,
         allowed_mentions: AllowedMentions | None = None,
         factory: ModelObjectFactory,
-    ) -> Message: ...
+    ) -> Message:
+        ...
 
     async def send_message(
         self,

@@ -119,12 +119,14 @@ class ModelObjectFactory:
     def make_channel(
         self,
         channel_data: Mapping[str, Any],
-    ) -> BaseChannel: ...
+    ) -> BaseChannel:
+        ...
 
     @overload
     def make_channel(
         self, channel_data: Mapping[str, Any], from_guild: Literal[True]
-    ) -> AnyGuildChannel: ...
+    ) -> AnyGuildChannel:
+        ...
 
     def make_channel(
         self,

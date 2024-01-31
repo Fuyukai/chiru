@@ -94,12 +94,14 @@ class ChannelDispatcher:
     @overload
     def register_channel[T: IncomingGatewayEvent](
         self, evt: type[T], channel: ObjectSendStream[T]
-    ) -> None: ...
+    ) -> None:
+        ...
 
     @overload
     def register_channel[T: DispatchedEvent](
         self, evt: type[T], channel: ObjectSendStream[tuple[EventContext, T]]
-    ) -> None: ...
+    ) -> None:
+        ...
 
     def register_channel[Dispatched: DispatchedEvent, GwEvt: IncomingGatewayEvent](
         self,
