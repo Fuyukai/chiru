@@ -1,9 +1,9 @@
 from typing import Any
 
-import arrow
 from bitarray.util import int2ba
 from cattrs import Converter
-from cattrs.preconf.json import configure_converter
+from cattrs.preconf.json import configure_converter as preconf_json
+from whenever import UTCDateTime
 
 from chiru.models.channel import RawChannel
 from chiru.models.embed import Embed
@@ -18,8 +18,30 @@ from chiru.models.role import Role
 from chiru.models.user import RawUser
 
 
-def _unstructure_arrow(it: arrow.Arrow) -> str:
-    return str(it.isoformat())
+def unstructure_utc_datetime(it: UTCDateTime) -> str:
+    """
+    An unstructuring hook for a :class:`.UTCDatetime`.
+
+    This returns the value in RFC 3339 timestamp format.
+    """
+
+    return it.rfc3339()
+
+
+def structure_utc_datetime(it: str, type: Any) -> UTCDateTime:
+    """
+    A structure hook for a :class:`.UTCDatetime`.
+
+    This will attempt to parse from a Unix timestamp first, and then from an RFC 3339 timestamp
+    if that fails.
+    """
+
+    try:
+        ts = float(it)
+    except ValueError:
+        return UTCDateTime.from_rfc3339(it)
+
+    return UTCDateTime.from_timestamp(ts)
 
 
 def _unstructure_perms(it: ReadOnlyPermissions) -> str:
@@ -38,6 +60,17 @@ def _structure_perms(it: str, type: Any) -> ReadOnlyPermissions | WriteablePermi
     raise ValueError(f"unknown type {type}")
 
 
+def add_useful_conversions(converter: Converter) -> Converter:
+    """
+    Adds useful structure and unstructure hooks to a :class:`.Converter`.
+    """
+
+    converter.register_structure_hook(UTCDateTime, structure_utc_datetime)
+    converter.register_unstructure_hook(UTCDateTime, unstructure_utc_datetime)
+
+    return converter
+
+
 def create_chiru_converter() -> Converter:
     """
     Creates a ``cattrs`` converter for deserialising Discord objects.
@@ -48,9 +81,8 @@ def create_chiru_converter() -> Converter:
         forbid_extra_keys=True,
         prefer_attrib_converters=True,
     )
-    configure_converter(converter)
-    converter.register_structure_hook(arrow.Arrow, lambda it, typ: arrow.get(it))
-    converter.register_unstructure_hook(arrow.Arrow, _unstructure_arrow)
+    preconf_json(converter)
+    add_useful_conversions(converter)
 
     for klass in (ReadOnlyPermissions, WriteablePermissions):
         converter.register_structure_hook(klass, _structure_perms)

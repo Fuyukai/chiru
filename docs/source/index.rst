@@ -86,7 +86,6 @@ they respond interactively to user-initiated actions.
    highlevel/messages.rst
 
 
-
 Indices and tables
 ==================
 

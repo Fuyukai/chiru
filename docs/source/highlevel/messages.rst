@@ -140,7 +140,7 @@ Deleted Messages
 
 Messages that are deleted are received with either the :class:`.MessageDelete` event, or the
 :class:`.MessageBulkDelete` event. The former is used for single message deletes, whereas the latter
-is used exclusively for bulk deletes 
+is used exclusively for bulk deletes.
 
 .. autoclass:: chiru.event.model.MessageDelete
 
