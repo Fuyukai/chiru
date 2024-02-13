@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING
 
 import attr
 import cattr
-from arrow import Arrow
 from cattr import Converter, override
+from whenever import UTCDateTime
 
 from chiru.models.base import DiscordObject, StatefulMixin
 from chiru.models.permissions import ReadOnlyPermissions
@@ -50,7 +50,7 @@ class RawMember:
     role_ids: list[int] = attr.ib(factory=list)
 
     #: When this member joined the guild.
-    joined_at: Arrow = attr.ib()
+    joined_at: UTCDateTime = attr.ib()
 
 
 @attr.s(slots=True, kw_only=True)

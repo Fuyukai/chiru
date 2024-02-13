@@ -4,10 +4,10 @@ import enum
 from functools import cached_property
 from typing import TYPE_CHECKING, Any, TypeAlias, cast
 
-import arrow
 import attr
 from cattrs import Converter
 from cattrs.gen import make_dict_structure_fn, override
+from whenever import UTCDateTime
 
 from chiru.models.base import DiscordObject, StatefulMixin
 from chiru.models.channel import AnyGuildChannel, TextualChannel
@@ -188,7 +188,7 @@ class RawMessage(DiscordObject):
     mentions: list[RawUser] = attr.ib()
 
     #: The timestamp for this message.
-    timestamp: arrow.Arrow = attr.ib()
+    timestamp: UTCDateTime = attr.ib()
 
     #: The type of message this is.
     type: MessageType = attr.ib()

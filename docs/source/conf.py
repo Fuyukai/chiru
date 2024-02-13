@@ -45,7 +45,6 @@ intersphinx_mapping = {
     "python": ("https://docs.python.org/3/", None),
     "anyio": ("https://anyio.readthedocs.io/en/stable/", None),
     "trio": ("https://trio.readthedocs.io/en/stable/", None),
-    "arrow": ("https://arrow.readthedocs.io/en/latest/", None),
     "cattr": ("https://catt.rs/en/stable/", None),  # damn, that's a nice domain hack
 }
 

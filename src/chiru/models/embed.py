@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import attr
 import cattr
-from arrow import Arrow
 from cattr import Converter, override
+from whenever import UTCDateTime
 
 # a fundamentally ugly API.
 
@@ -156,7 +156,7 @@ class Embed:
     url: str = attr.ib(default=None)
 
     #: The timestamp for this embed, if any.
-    timestamp: Arrow | None = attr.ib(default=None)
+    timestamp: UTCDateTime | None = attr.ib(default=None)
 
     #: The colour for this embed, if any.
     colour: int | None = attr.ib(default=None)

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Protocol, override, runtime_checkable
 
-import arrow
 import attr
+from whenever import UTCDateTime
 
 if TYPE_CHECKING:
     from chiru.bot import ChiruBot
@@ -26,13 +26,13 @@ class DiscordObject:
     id: int = attr.ib()
 
     @property
-    def creation_time(self) -> arrow.Arrow:
+    def creation_time(self) -> UTCDateTime:
         """
         Gets the creation time of this Discord object.
         """
 
         ts = ((int(self.id) >> 22) + DISCORD_EPOCH) / 1000
-        return arrow.get(ts)
+        return UTCDateTime.from_timestamp(ts)
 
     @override
     def __hash__(self) -> int:
