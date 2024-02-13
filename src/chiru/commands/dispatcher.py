@@ -316,6 +316,8 @@ class CommandDispatcher:
         self,
         parser: ArgumentParser,
         fn: CommandCallable[Namespace],
+        *,
+        splitting_strategy: SplittingStrategy = shlex.split,
     ) -> None:
         """
         Adds a new command to this dispatcher that uses a raw argument parser.
@@ -329,7 +331,12 @@ class CommandDispatcher:
             instead of exiting.
         """
 
-        raise NotImplementedError()
+        command = RawArgumentParserCommand(
+            parser=parser, 
+            splitting_strategy=splitting_strategy,
+            fn=fn,
+        )
+        self.command_mapping[command.name] = command
 
     def add_command[T](
         self,
