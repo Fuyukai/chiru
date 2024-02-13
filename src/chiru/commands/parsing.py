@@ -48,12 +48,11 @@ class InteractiveParser(argparse.ArgumentParser):
     @override
     def print_help(self, file: IO[str] | None = None) -> None:
         raise CommandRequestedHelp()
-        
+
     @override
     def error(self, message: str) -> NoReturn:
         raise ParsingError(message)
 
     @override
     def exit(self, status: int = 0, message: str | None = None) -> NoReturn:
-        print(self._registries["action"])
         raise RuntimeError("Somehow, exit() got called") from ParsingError(message)

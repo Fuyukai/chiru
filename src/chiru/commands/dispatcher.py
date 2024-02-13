@@ -98,23 +98,41 @@ class BaseCommand(abc.ABC):
         :param command_content: The command content with the command prefix removed.
         """
 
+
 @attr.s(slots=True, kw_only=True, frozen=True)
-class RawArgumentParserCommand(BaseCommand):
+class UnifiedArgumentParserCommand(BaseCommand, abc.ABC):
     """
-    A command that uses a raw :class:`argparse.ArgumentParser` for arguments.
+    A unified class for both types of argparse command parsers.
     """
 
     parser: ArgumentParser = attr.ib()
-    fn: CommandCallable[Namespace]
+    splitting_strategy: SplittingStrategy = attr.ib()
 
     @property
     @override
     def name(self) -> str:
         return self.parser.prog
 
-    @override    
+    @override
     def make_help_message(self) -> str:
         return self.parser.format_help()
+
+    def _parse_arguments(self, context: CommandDispatchContext, content: str) -> Namespace:
+        try:
+            parsed = self.parser.parse_args(self.splitting_strategy(content))
+        except argparse.ArgumentError as e:
+            raise ParsingError(e.message) from e
+
+        return parsed
+
+
+@attr.s(slots=True, kw_only=True, frozen=True)
+class RawArgumentParserCommand(UnifiedArgumentParserCommand):
+    """
+    A command that uses a raw :class:`argparse.ArgumentParser` for arguments.
+    """
+
+    fn: CommandCallable[Namespace] = attr.ib()
 
     @override
     async def execute(
@@ -122,21 +140,15 @@ class RawArgumentParserCommand(BaseCommand):
         context: CommandDispatchContext,
         command_content: str,
     ) -> None:
-        try:
-            parsed = self.parser.parse_args(command_content)
-        except argparse.ArgumentError as e:
-            raise ParsingError(e.message) from e
-
-        await self.fn(context, parsed)
+        await self.fn(context, self._parse_arguments(context, command_content))
 
 
-@attr.s(slots=True, kw_only=True)
-class SpecCommand[Spec](BaseCommand):
+@attr.s(slots=True, kw_only=True, frozen=True)
+class SpecCommand[Spec](UnifiedArgumentParserCommand):
     """
     A command that uses a command specification for arguments.
     """
 
-    parser: ArgumentParser = attr.ib()
     typ: type[Spec] = attr.ib()
     fn: CommandCallable[Spec] = attr.ib()
 
@@ -144,8 +156,8 @@ class SpecCommand[Spec](BaseCommand):
     @override
     def name(self) -> str:
         return self.parser.prog
-    
-    @override    
+
+    @override
     def make_help_message(self) -> str:
         return self.parser.format_help()
 
@@ -155,12 +167,9 @@ class SpecCommand[Spec](BaseCommand):
         context: CommandDispatchContext,
         command_content: str,
     ) -> None:
-        try:
-            parsed = self.parser.parse_args(shlex.split(command_content))
-        except argparse.ArgumentError as e:
-            raise ParsingError(e.message) from e
-
-        created = context.dispatcher.converter.structure(vars(parsed), self.typ)
+        created = context.dispatcher.converter.structure(
+            vars(self._parse_arguments(context, command_content)), self.typ
+        )
         await self.fn(context, created)
 
 
@@ -194,7 +203,7 @@ class CommandDispatcher:
 
     #: A list of command preconditions that must be checked before a command is ran.
     #:
-    #: A precondition is a (CommandDispatchContext)
+    #: A precondition is a (CommandDispatchContext) -> bool callable.
     command_preconditions: list[CommandPrecondition] = attr.ib(factory=list)
 
     #: A channel where command errors are published on. This includes parsing errors, precondition
@@ -378,7 +387,7 @@ class CommandDispatcher:
             command_usage=help or "No help specified.",
         )
         parser = make_parser(spec, parser)
-        command = SpecCommand(parser=parser, typ=spec, fn=fn)
+        command = SpecCommand(parser=parser, typ=spec, fn=fn, splitting_strategy=splitting_strategy)
         self.command_mapping[command.name] = command
 
     async def process_command_event(self, context: EventContext, event: MessageCreate) -> None:
