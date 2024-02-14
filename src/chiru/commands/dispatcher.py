@@ -5,9 +5,10 @@ import argparse
 import shlex
 import textwrap
 from argparse import ArgumentParser, Namespace
-from collections.abc import Awaitable, Callable, MutableMapping, Sequence
+from collections import deque
+from collections.abc import Awaitable, Callable, MutableMapping, MutableSequence, Sequence
 from functools import partial
-from typing import NoReturn, final, override
+from typing import Literal, NoReturn, final, override
 
 import anyio
 import attr
@@ -17,13 +18,17 @@ from anyio.abc import TaskGroup
 from anyio.streams.memory import MemoryObjectSendStream
 from cattrs import Converter
 from chiru.commands.parsing import CommandRequestedHelp, InteractiveParser, ParsingError
+from chiru.commands.precondition import PreconditionFailed
 from chiru.event.dispatcher import DispatchChannel, EventContext
 from chiru.event.model import MessageCreate
 from chiru.serialise import add_useful_conversions
 from datargs import make_parser
 
 type CommandCallable[T] = Callable[[CommandDispatchContext, T], Awaitable[None]]
-type CommandPrecondition = Callable[[CommandDispatchContext], bool]
+type CommandPrecondition = Callable[[CommandDispatchContext], Awaitable[Literal[None]]]
+type PreconditionFailureChannel = MemoryObjectSendStream[
+    tuple[BaseCommandDispatchContext, ExceptionGroup[PreconditionFailed]]
+]
 type ErrorChannel = MemoryObjectSendStream[tuple[BaseCommandDispatchContext, Exception]]
 type SplittingStrategy = Callable[[str], Sequence[str]]
 
@@ -203,7 +208,9 @@ class CommandDispatcher:
 
     #: A list of command preconditions that must be checked before a command is ran.
     #:
-    #: A precondition is a (CommandDispatchContext) -> bool callable.
+    #: A precondition is a (CommandDispatchContext) -> <await> None callable. It either returns
+    #: nothing (to signify a successful precondition) or raises a :class:`.PreconditionFailed`
+    #: error.
     command_preconditions: list[CommandPrecondition] = attr.ib(factory=list)
 
     #: A channel where command errors are published on. This includes parsing errors, precondition
@@ -212,6 +219,12 @@ class CommandDispatcher:
     #: This must be passed into the dispatcher. If no channel is provided, the default behaviour
     #: is to log errors.
     error_channel: ErrorChannel | None = attr.ib(default=None)
+
+    #: A channel where precondition failures are published on.
+    #:
+    #: This must be passed into the dispatcher. If no channel is provided, the default behaviour
+    #: is to log errors.
+    precondition_failure_channel: PreconditionFailureChannel | None = attr.ib(default=None)
 
     #: A channel where unknown command messages are published on.
     #:
@@ -256,6 +269,7 @@ class CommandDispatcher:
             message=context.message_event.message.id,
             exc_info=exception,
         )
+        await anyio.sleep(0)
 
     async def _process_command_not_found(self, context: BaseCommandDispatchContext) -> None:
         """
@@ -270,6 +284,26 @@ class CommandDispatcher:
         else:
             # always checkpoint
             await anyio.sleep(0)
+
+    async def _process_precondition_failures(
+        self, context: BaseCommandDispatchContext, group: ExceptionGroup[PreconditionFailed]
+    ) -> None:
+        """
+        Processes a single precondition failed error.
+        """
+
+        if self.precondition_failure_channel is not None:
+            try:
+                await self.precondition_failure_channel.send((context, group))
+            except (BrokenResourceError, ClosedResourceError):
+                self.precondition_failure_channel = None
+
+        logger.error(
+            "Command preconditions failed",
+            command=context.command_name,
+            message=context.message_event.message.id,
+            exc_info=group,
+        )
 
     async def send_help_for_command(self, context: CommandDispatchContext):
         """
@@ -292,6 +326,25 @@ class CommandDispatcher:
                 self.help_requests_channel = None
 
         await self.send_help_for_command(cmd_context)
+
+    async def _execute_precondition(
+        self,
+        excs: MutableSequence[PreconditionFailed],
+        ctx: CommandDispatchContext,
+        cond: CommandPrecondition,
+    ) -> None:
+        """
+        Executes a single command precondition.
+        """
+
+        try:
+            await cond(ctx)
+        except PreconditionFailed as e:
+            excs.append(e)
+        except Exception as e:
+            new_exc = PreconditionFailed("Exception when invoking precondition")
+            new_exc.__cause__ = e
+            excs.append(new_exc)
 
     async def _execute_command(
         self,
@@ -332,7 +385,7 @@ class CommandDispatcher:
         """
 
         command = RawArgumentParserCommand(
-            parser=parser, 
+            parser=parser,
             splitting_strategy=splitting_strategy,
             fn=fn,
         )
@@ -438,6 +491,16 @@ class CommandDispatcher:
             command_name=command_name,
             command=command,
         )
+
+        dq = deque[PreconditionFailed]()
+        async with anyio.create_task_group() as group:
+            for cond in self.command_preconditions:
+                group.start_soon(partial(self._execute_precondition, dq, cmd_context, cond))
+
+        if dq:
+            errors = ExceptionGroup(f"Preconditions for {command.name} failed", dq)
+            await self._process_precondition_failures(cmd_context, errors)
+            return
 
         fn = partial(self._execute_command, command=command, cmd_context=cmd_context, content=rest)
 
