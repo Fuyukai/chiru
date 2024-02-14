@@ -75,6 +75,9 @@ class BaseCommand(abc.ABC):
     Base class for a command object.
     """
 
+    #: The group for this command.
+    group: str | None
+
     @property
     @abc.abstractmethod
     def name(self) -> str:
@@ -138,6 +141,7 @@ class RawArgumentParserCommand(UnifiedArgumentParserCommand):
     """
 
     fn: CommandCallable[Namespace] = attr.ib()
+    group: str = attr.ib()
 
     @override
     async def execute(
@@ -156,6 +160,7 @@ class SpecCommand[Spec](UnifiedArgumentParserCommand):
 
     typ: type[Spec] = attr.ib()
     fn: CommandCallable[Spec] = attr.ib()
+    group: str = attr.ib()
 
     @property
     @override
@@ -371,6 +376,7 @@ class CommandDispatcher:
         fn: CommandCallable[Namespace],
         *,
         splitting_strategy: SplittingStrategy = shlex.split,
+        group: str = "Unclassified",
     ) -> None:
         """
         Adds a new command to this dispatcher that uses a raw argument parser.
@@ -388,6 +394,7 @@ class CommandDispatcher:
             parser=parser,
             splitting_strategy=splitting_strategy,
             fn=fn,
+            group=group,
         )
         self.command_mapping[command.name] = command
 
@@ -399,6 +406,7 @@ class CommandDispatcher:
         name: str | None = None,
         help: str | None = None,
         splitting_strategy: SplittingStrategy = shlex.split,
+        group: str = "Unclassified",
     ) -> None:
         """
         Adds a new command to this dispatcher.
@@ -432,6 +440,10 @@ class CommandDispatcher:
         :param splitting_strategy: A callable that is responsible for splitting command arguments.
 
             This defaults to :func:`shlex.split`,
+
+        :param group: The group that this command is within.
+
+            This is exclusively used for the default ``list-commands`` command.
         """
 
         name = name or fn.__name__.replace("_", "-")
@@ -447,7 +459,9 @@ class CommandDispatcher:
             command_usage=help or "No help specified.",
         )
         parser = make_parser(spec, parser)
-        command = SpecCommand(parser=parser, typ=spec, fn=fn, splitting_strategy=splitting_strategy)
+        command = SpecCommand(
+            parser=parser, typ=spec, fn=fn, splitting_strategy=splitting_strategy, group=group
+        )
         self.command_mapping[command.name] = command
 
     async def process_command_event(self, context: EventContext, event: MessageCreate) -> None:

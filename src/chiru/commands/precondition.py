@@ -18,11 +18,11 @@ async def ran_by_owner(context: CommandDispatchContext):
     owner = client.app.owner
     if not owner:
         raise PreconditionFailed("Couldn't find owner")
-    
+
     if owner.id != context.message_event.author.id:
         raise PreconditionFailed("Message author is not the owner")
 
-    
+
 async def ran_in_guild(context: CommandDispatchContext):
     """
     A command precondition that requires a command to be ran in a guild channel, not a DM.
