@@ -8,7 +8,7 @@ from argparse import ArgumentParser, Namespace
 from collections import deque
 from collections.abc import Awaitable, Callable, MutableMapping, MutableSequence, Sequence
 from functools import partial
-from typing import Literal, NoReturn, final, override
+from typing import Any, Literal, NoReturn, final, override
 
 import anyio
 import attr
@@ -69,6 +69,28 @@ class CommandDispatchContext(BaseCommandDispatchContext):
 
     command: BaseCommand = attr.ib()
 
+
+def extract_cmd_name_help(
+    fn: Callable[..., Any], 
+    name: str | None, 
+    doc: str | None
+) -> tuple[str, str]:
+    """
+    Extracts the name and doc from the provided command.
+    """
+
+    name = name or fn.__name__.replace("_", "-")
+    if doc is None:
+        doc = getattr(fn, "__doc__", None)
+
+        if doc is not None:
+            doc = textwrap.dedent(doc).strip()
+            doc = doc.split("\n", 1)[0]
+
+        else:
+            doc = "No help provided."
+
+    return (name, doc)
 
 class BaseCommand(abc.ABC):
     """
@@ -182,6 +204,34 @@ class SpecCommand[Spec](UnifiedArgumentParserCommand):
         )
         await self.fn(context, created)
 
+
+@attr.s(slots=True, kw_only=True, frozen=True)
+class NoArgumentsCommand(BaseCommand):
+    """
+    A command that has zero arguments.
+    """
+
+    _name: str = attr.ib(alias="name")
+    _help: str = attr.ib(alias="help", default="No help provided.")
+    group: str = attr.ib(default="Unclassified")
+    fn: Callable[[CommandDispatchContext], Awaitable[None]] = attr.ib()
+
+    @property
+    @override
+    def name(self) -> str:
+        return self._name
+    
+    @override
+    def make_help_message(self) -> str:
+        return self._help
+    
+    @override
+    async def execute(
+        self, 
+        context: CommandDispatchContext, 
+        command_content: str
+    ) -> None:
+        return await self.fn(context)
 
 @attr.s(slots=True, kw_only=True)
 @final
@@ -398,6 +448,26 @@ class CommandDispatcher:
         )
         self.command_mapping[command.name] = command
 
+    def add_no_arguments_command(
+        self, 
+        fn: Callable[[CommandDispatchContext], Awaitable[None]],
+        *,
+        name: str | None = None,
+        help: str | None = None,
+        group: str = "Unclassified",
+    ) -> None:
+        """
+        Adds a command that doesn't take any arguments.
+
+        See :meth:`.add_command` for more information on the parameters to this method.
+        """
+
+        name, help = extract_cmd_name_help(fn, name, help)
+        command = NoArgumentsCommand(
+            name=name, help=help, group=group, fn=fn
+        )
+        self.command_mapping[command.name] = command
+
     def add_command[T](
         self,
         spec: type[T],
@@ -419,9 +489,9 @@ class CommandDispatcher:
 
         :param fn: The command callable to run.
 
-            This is a callable that accepts a :class:`.EventContext`, the :class:`.MessageCreate`
-            that invoked the command, and the command specification object provided,
-            and returns an ``Awaitable[None]`` that is used to run the command.
+            This is a callable that accepts a :class:`.CommandDispatchContext` with information 
+            about the command's invoccation environment, and the command specification object 
+            provided, and returns an ``Awaitable[None]`` that is used to run the command.
 
             The same command function can be provided for multiple commands, provided it accepts
             multiple types of command specifications.
@@ -446,14 +516,7 @@ class CommandDispatcher:
             This is exclusively used for the default ``list-commands`` command.
         """
 
-        name = name or fn.__name__.replace("_", "-")
-        if help is None:
-            doc: str | None = getattr(fn, "__doc__", None)
-
-            if doc is not None:
-                doc = textwrap.dedent(doc).strip()
-                help = doc.split("\n", 1)[0]
-
+        name, help = extract_cmd_name_help(fn, name, help)
         parser = InteractiveParser(
             command_name=name,
             command_usage=help or "No help specified.",
