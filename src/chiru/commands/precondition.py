@@ -1,5 +1,11 @@
-from chiru.commands.dispatcher import CommandDispatchContext
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from chiru.models.channel import AnyGuildChannel
+
+if TYPE_CHECKING:
+    from chiru.commands.dispatcher import CommandDispatchContext
 
 
 class PreconditionFailed(ValueError):

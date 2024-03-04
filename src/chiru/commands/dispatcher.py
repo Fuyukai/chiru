@@ -5,9 +5,10 @@ import argparse
 import shlex
 import textwrap
 from argparse import ArgumentParser, Namespace
-from collections import deque
+from collections import defaultdict, deque
 from collections.abc import Awaitable, Callable, MutableMapping, MutableSequence, Sequence
 from functools import partial
+from io import StringIO
 from typing import Any, Literal, NoReturn, final, override
 
 import anyio
@@ -21,6 +22,7 @@ from chiru.commands.parsing import CommandRequestedHelp, InteractiveParser, Pars
 from chiru.commands.precondition import PreconditionFailed
 from chiru.event.dispatcher import DispatchChannel, EventContext
 from chiru.event.model import MessageCreate
+from chiru.mentions import SUPPRESS_ALL
 from chiru.serialise import add_useful_conversions
 from datargs import make_parser
 
@@ -97,8 +99,9 @@ class BaseCommand(abc.ABC):
     Base class for a command object.
     """
 
-    #: The group for this command.
-    group: str | None
+    def __init__(self) -> None:
+        #: The group for this command.
+        self.group: str | None = None
 
     @property
     @abc.abstractmethod
@@ -232,6 +235,63 @@ class NoArgumentsCommand(BaseCommand):
         command_content: str
     ) -> None:
         return await self.fn(context)
+    
+
+class ListCommandsCommand(BaseCommand):
+    """
+    A special command that lists all of the commands for this bot.
+    """
+
+    @property
+    @override
+    def name(self) -> str:
+        return "list-commands"
+    
+    @override
+    def make_help_message(self) -> str:
+        return "Lists all commands in the provided group, or in all groups if no group is provided."
+    
+    async def _send_all_commands(self, context: CommandDispatchContext) -> None:
+        """
+        Sends the listing of all commands.
+        """
+
+        message = StringIO()
+        message.write(
+            f"**Commands**\nUse ``{context.dispatcher.command_prefix}help <command>`` "
+            "for more information about a command.\n\n"
+        )
+
+        by_group: dict[str, list[str]] = defaultdict(list)
+        unclassified: list[str] = []
+        for name, command in context.dispatcher.command_mapping.items():
+            group = command.group
+            if group is None or group == "Unclassified":
+                unclassified.append(name)
+            else:
+                by_group[group].append(name)
+
+        row_num = 0
+        for idx, (group, items) in enumerate(by_group.items()):
+            row_num = idx + 1
+
+            message.write(f"**{row_num}) {group}:** ")
+            message.write(" | ".join([f"``{i}``" for i in items]))
+            message.write("\n")
+
+        if unclassified:
+            message.write(f"**{row_num + 1}) Unclassified:** ")
+            message.write(" | ".join([f"``{i}``" for i in unclassified]))
+            message.write("\n")
+
+        await context.message_event.channel.send_message(
+            message.getvalue(), allowed_mentions=SUPPRESS_ALL
+        )
+
+    @override
+    async def execute(self, context: CommandDispatchContext, command_content: str) -> None:
+        if not command_content:
+            await self._send_all_commands(context)
 
 @attr.s(slots=True, kw_only=True)
 @final
@@ -305,6 +365,9 @@ class CommandDispatcher:
     #: is to run commands linearly.
     task_group: TaskGroup | None = attr.ib(default=None)
 
+    def __attrs_post_init__(self):
+        self.command_mapping["list-commands"] = ListCommandsCommand()
+
     async def _process_exception(self, context: CommandDispatchContext, exception: Exception):
         """
         Processes a single command exception.
@@ -350,6 +413,7 @@ class CommandDispatcher:
         if self.precondition_failure_channel is not None:
             try:
                 await self.precondition_failure_channel.send((context, group))
+                return
             except (BrokenResourceError, ClosedResourceError):
                 self.precondition_failure_channel = None
 
